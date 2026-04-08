@@ -989,14 +989,20 @@ function splitCSVLine(line){
 function normDate(s){
   if(!s||!s.trim()) return '';
   s=s.trim();
-  // Already DD/MM/YYYY
+  // Already DD/MM/YYYY (two-digit day and month)
   if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-  // YYYY-MM-DD (with optional time)
-  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
-  // Google Forms: M/D/YYYY, H:MM:SS a. m./p. m.  OR  M/D/YYYY H:MM:SS
-  const m2=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if(m2) return `${String(m2[2]).padStart(2,'0')}/${String(m2[1]).padStart(2,'0')}/${m2[3]}`;
+  // YYYY-MM-DD (with optional time: 2026-04-23 00:00:00)
+  const mISO=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(mISO) return `${mISO[3]}/${mISO[2]}/${mISO[1]}`;
+  // Google Forms en español: D/M/YYYY, H:MM:SS a. m./p. m.
+  // e.g. "8/4/2026, 3:40:19 p. m."  → day=8, month=4
+  const mForms=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(mForms){
+    const day=String(mForms[1]).padStart(2,'0');
+    const mon=String(mForms[2]).padStart(2,'0');
+    const yr=mForms[3];
+    return `${day}/${mon}/${yr}`;
+  }
   return s;
 }
 
