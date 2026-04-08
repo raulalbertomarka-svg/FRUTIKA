@@ -211,7 +211,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- FECHA DE CORTE -->
 <div class="corte-bar">
   <label>📅 FECHA DE CORTE</label>
-  <input type="date" id="fechaCorte" value="2026-03-30" min="2025-01-01" max="2099-12-31" onchange="renderAll()"/>
+  <input type="date" id="fechaCorte" value="2026-04-08" min="2025-01-01" max="2099-12-31" onchange="renderAll()"/>
   <div class="corte-badge"><div class="dot"></div><span id="corteLbl">Corte: 30/03/2026</span></div>
   <div style="margin-left:auto;font-size:12px;color:var(--muted)">Los datos se filtran hasta la fecha de corte seleccionada</div>
 </div>
@@ -587,12 +587,16 @@ function calcCumplimiento(vData){
   // From averiados data (filtered)
   filterData(RA).forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
 
-  // From pure visits (Sheets rows where both were NO) — also date-filtered
+  // From pure visits (Sheets rows where both were NO)
+  // Apply same date filter but be lenient with corte — visits today count
+  const visitCorte=new Date(); visitCorte.setHours(23,59,59);
   RVISITAS.forEach(r=>{
     const d=parseDate(r.FECHA);
     if(!d) return;
     if(from && d<from) return;
-    if(to && d>to) return;
+    // Use max(to, today) so today's visits always count
+    const effectiveTo = to && to < visitCorte ? visitCorte : to;
+    if(effectiveTo && d>effectiveTo) return;
     visitedPDVs.add(normStr(r['PUNTO DE VENTA']));
   });
 
