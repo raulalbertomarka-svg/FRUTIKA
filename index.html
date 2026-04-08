@@ -174,6 +174,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sync-btn{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .18s;}
 .sync-btn:hover{border-color:var(--g);color:var(--g);}
 
+/* ── GENERAR INFORME ── */
+.gen-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;border:none;background:var(--g);color:#fff;cursor:pointer;letter-spacing:.04em;transition:opacity .2s;}
+.gen-btn:hover{opacity:.85;}
+
+/* ── PRINT STYLES ── */
+@media print {
+  body { background: #1a1a1a !important; color: #e8eaf0 !important; }
+  .topbar, .corte-bar, .filter-bar, .tabs, .sync-bar { display: none !important; }
+  .main { padding: 0 !important; }
+  .sec { display: none !important; }
+  #informe-print { display: block !important; }
+}
+
+#informe-print {
+  display: none;
+  font-family: 'DM Sans', sans-serif;
+  background: #1a1a1a;
+  color: #e8eaf0;
+  padding: 0;
+}
+
 /* ── PRINT / RESPONSIVE ── */
 @media(max-width:900px){
   .krow{grid-template-columns:1fr 1fr;}
@@ -239,6 +260,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="tab"       id="t2" onclick="switchTab(2,this)">📦 Vencimientos</div>
   <div class="tab"       id="t3" onclick="switchTab(3,this)">⚠️ Averiados</div>
   <div class="tab"       id="t4" onclick="switchTab(4,this)">💡 Recomendaciones</div>
+  <div style="margin-left:auto;display:flex;align-items:center;padding-right:12px">
+    <button class="gen-btn" onclick="generarInforme()">📄 Generar Informe PDF</button>
+  </div>
 </div>
 
 <div class="main">
@@ -1154,6 +1178,285 @@ async function loadSheetData(manual=false){
 setInterval(()=>loadSheetData(false), 5*60*1000);
 
 // ═══════════════════════════════════
+// GENERAR INFORME PDF
+// ═══════════════════════════════════
+function generarInforme(){
+  const vData = filterData(RV);
+  const aData = filterData(RA);
+  const cumpl = calcCumplimiento(vData);
+  const alerts = calcAlerts(vData);
+  const corte = getCorte();
+  const fmtCorte = fmtDate(corte);
+
+  // Period label
+  const selectedTags = document.getElementById('q-tags').innerText.replace(/×/g,'').trim();
+  const periodo = selectedTags && selectedTags !== 'Mostrando todo el período'
+    ? selectedTags : 'Período completo';
+
+  const totalAsig = RR.length;
+  const totalCarg = cumpl.reduce((s,r)=>s+r.cargados,0);
+  const sinCargar = totalAsig - totalCarg;
+  const cumplPct  = totalAsig ? Math.round(totalCarg/totalAsig*100) : 0;
+  const totalVU   = Math.round(vData.reduce((s,r)=>s+(r.CANTIDAD||0),0));
+  const totalAU   = Math.round(aData.reduce((s,r)=>s+(r.CANTIDAD||0),0));
+  const best      = cumpl.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct)[0];
+  const topAver   = aData.length ? aggBy(aData,'PUNTO DE VENTA')[0] : null;
+  const cero      = cumpl.filter(r=>r.pct===0);
+
+  // Colors
+  const G='#22c55e', R='#ef4444', Y='#f59e0b', B='#3b82f6';
+  const BG='#1a1a1a', CARD='#22263a', CARD2='#2a2f45', BORDER='#2e3347';
+  const TEXT='#e8eaf0', MUTED='#6b7280';
+
+  function kpiCard(val, lbl, sub, color){
+    return `<div style="background:${CARD};border:1px solid ${BORDER};border-radius:12px;padding:22px 18px 16px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:${color};border-radius:12px 0 0 12px"></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.09em;color:${MUTED};text-transform:uppercase;margin-bottom:6px">${lbl}</div>
+      <div style="font-size:36px;font-weight:700;color:${color};font-family:'DM Mono',monospace;line-height:1">${val}</div>
+      <div style="font-size:11px;color:${MUTED};margin-top:5px">${sub}</div>
+    </div>`;
+  }
+
+  function sectionTitle(title, color){
+    return `<div style="font-size:22px;font-weight:900;color:${TEXT};margin:32px 0 6px;padding-left:12px;border-left:5px solid ${color};letter-spacing:.02em">${title}</div>
+    <div style="height:1px;background:${BORDER};margin-bottom:18px"></div>`;
+  }
+
+  // Cumplimiento bars
+  function cumplBars(){
+    const max = Math.max(...cumpl.map(r=>r.total),1);
+    return cumpl.map(r=>{
+      const color = r.pct>=80?G:r.pct>=50?Y:R;
+      const cW = r.total ? (r.cargados/r.total*100).toFixed(1) : 0;
+      const pW = r.total ? (r.pendientes/r.total*100).toFixed(1) : 0;
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:11px;color:${TEXT};min-width:140px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+        <div style="flex:1;height:14px;background:${CARD2};border-radius:4px;overflow:hidden;display:flex">
+          <div style="width:${cW}%;background:${color};height:100%"></div>
+          <div style="width:${pW}%;background:${R};opacity:.4;height:100%"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${color};min-width:34px;text-align:right">${r.pct}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Alert cards
+  function alertCards(list, max=5){
+    if(!list.length) return `<div style="color:${G};font-size:13px;padding:16px">✅ Sin alertas críticas en este período</div>`;
+    return list.slice(0,max).map(r=>{
+      const color = r.days<=7?R:r.days<=15?Y:G;
+      return `<div style="display:flex;border:1px solid ${BORDER};border-radius:8px;overflow:hidden;margin-bottom:10px;background:${CARD2}">
+        <div style="width:5px;background:${color};flex-shrink:0"></div>
+        <div style="padding:12px 14px;flex:1">
+          <div style="font-size:13px;font-weight:700;color:${TEXT}">${r.PRODUCTO}</div>
+          <div style="font-size:11px;color:${MUTED};margin:2px 0 8px">${r['PUNTO DE VENTA']}</div>
+          <div style="display:flex;gap:20px;align-items:center">
+            <div><div style="font-size:9px;text-transform:uppercase;color:${MUTED}">STOCK</div><div style="font-size:16px;font-weight:700;color:${TEXT}">${fmtN(r.CANTIDAD)} u.</div></div>
+            <div><div style="font-size:9px;text-transform:uppercase;color:${MUTED}">VENCE</div><div style="font-size:13px;font-weight:700;color:${TEXT}">${fmtDate(r.vence)}</div></div>
+            <div><div style="font-size:9px;text-transform:uppercase;color:${MUTED}">DÍAS</div><div style="font-size:13px;font-weight:700;color:${color}">${r.days}d</div></div>
+            <div style="margin-left:auto"><span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:${R}">CRÍTICO</span></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Brecha table
+  function brechaTable(){
+    return `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr>
+        ${['REPOSITOR','ASIGNADOS','CARGADOS','PENDIENTES','CUMPL.'].map(h=>
+          `<th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${MUTED};border-bottom:1px solid ${BORDER};background:${CARD2}">${h}</th>`
+        ).join('')}
+      </tr></thead>
+      <tbody>${cumpl.map((r,i)=>{
+        const color=r.pct>=80?G:r.pct>=50?Y:R;
+        const bg=i%2===0?CARD:BG;
+        return `<tr style="background:${bg}">
+          <td style="padding:8px 10px;color:${TEXT};border-bottom:1px solid ${BORDER}"><strong>${r.pct>0?'★ ':''}</strong>${r.name}</td>
+          <td style="padding:8px 10px;color:${TEXT};border-bottom:1px solid ${BORDER};font-family:'DM Mono',monospace">${r.total}</td>
+          <td style="padding:8px 10px;color:${G};border-bottom:1px solid ${BORDER};font-family:'DM Mono',monospace">${r.cargados}</td>
+          <td style="padding:8px 10px;color:${R};border-bottom:1px solid ${BORDER};font-family:'DM Mono',monospace">${r.pendientes}</td>
+          <td style="padding:8px 10px;color:${color};border-bottom:1px solid ${BORDER};font-family:'DM Mono',monospace;font-weight:700">${r.pct}%</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  // Recs
+  const recs = [
+    { n:'01', t:'Revisión Urgente de Repositores',
+      txt: cero.length>0
+        ? `${cero.length} repositor${cero.length>1?'es tienen':'tiene'} 0% de cumplimiento. Convocar reunión en 48 hs e identificar causas raíz del ${100-cumplPct}% de incumplimiento.`
+        : 'Todos los repositores tienen al menos un reporte cargado. Mantener el ritmo y apuntar a cobertura completa.' },
+    { n:'02', t:'Gestión de Vencimientos — Acción Inmediata',
+      txt: alerts.length>0
+        ? `${alerts.length} alerta${alerts.length>1?'s críticas':'  crítica'} activa${alerts.length>1?'s':''} con ${fmtN(alerts.reduce((s,r)=>s+(r.CANTIDAD||0),0))} unidades. Coordinar retiro o activación urgente con los puntos de venta afectados.`
+        : 'Sin vencimientos críticos en los próximos 30 días.' },
+    { n:'03', t:'Control de Productos Averiados',
+      txt: aData.length>0
+        ? `${fmtN(totalAU)} unidades averiadas.${topAver?` ${topAver[0]} concentra el mayor volumen (${fmtN(topAver[1])} u). Requiere atención prioritaria.`:''}`
+        : 'Sin productos averiados en el período.' },
+    { n:'04', t:'Reconocimiento y Benchmarking Interno',
+      txt: best
+        ? `${best.name} lidera con ${best.pct}% de cumplimiento (${best.cargados}/${best.total} locales). Tomar como referencia para replicar buenas prácticas.`
+        : 'Sin repositores con carga registrada en el período.' }
+  ];
+
+  // Build full report HTML
+  const reportHTML = `
+  <div style="background:${BG};min-height:100vh;padding:0">
+
+    <!-- PORTADA -->
+    <div style="background:#111;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px 80px;page-break-after:always">
+      <div style="display:flex;gap:0">
+        <div style="width:5px;background:#555;border-radius:3px;margin-right:24px"></div>
+        <div>
+          <div style="font-size:64px;font-weight:900;color:${TEXT};letter-spacing:.06em;line-height:1">FRUTIKA</div>
+          <div style="font-size:22px;color:#aaa;margin-top:10px">Reporte Ejecutivo de Campo</div>
+          <div style="font-size:16px;color:#888;margin-top:6px">Corte: ${fmtCorte}</div>
+        </div>
+      </div>
+      <div style="margin-top:60px">
+        <div style="font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.1em">REPORTES DE VENCIMIENTOS Y AVERIADOS</div>
+        <div style="font-size:11px;color:#444;margin-top:8px">CONFIDENCIAL – USO INTERNO</div>
+      </div>
+      <div style="position:absolute;bottom:30px;right:60px;font-size:11px;color:#444">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <div style="padding:48px 60px;page-break-after:always">
+      <div style="font-size:28px;font-weight:900;color:${TEXT};margin-bottom:4px">RESUMEN EJECUTIVO — VENCIMIENTOS</div>
+      <div style="font-size:13px;color:${MUTED};margin-bottom:20px">Desempeño de carga de reportes — Corte ${fmtCorte} &nbsp;|&nbsp; ${periodo}</div>
+      <div style="height:1px;background:${BORDER};margin-bottom:24px"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+        ${kpiCard(fmtN(totalAsig),'Locales Asignados','Total cobertura teórica',B)}
+        ${kpiCard(fmtN(totalCarg),'Locales Cargados','Con reporte registrado',G)}
+        ${kpiCard(fmtN(sinCargar),'Sin Cargar','Pendientes de reporte',sinCargar>0?R:G)}
+        ${kpiCard(cumplPct+'%','Cumplimiento','Meta: 100%',cumplPct>=80?G:cumplPct>=50?Y:R)}
+      </div>
+      ${sinCargar>0?`<div style="display:flex;gap:12px;padding:14px 16px;border-radius:8px;border-left:4px solid ${R};background:rgba(239,68,68,.08);margin-bottom:16px;font-size:13px;line-height:1.5">
+        <span>⚠</span><span>El <strong>${100-cumplPct}%</strong> de los locales asignados no presentan reporte cargado a la fecha de corte. Se requiere acción correctiva inmediata sobre los <strong>${cero.length} repositores</strong> con 0% de cumplimiento.${best?` Repositor con mayor carga: <em>${best.name}</em> (${best.pct}% — ${best.cargados} de ${best.total} locales).`:''}</span>
+      </div>`:''}
+      <div style="font-size:11px;color:#666;text-align:center;margin-top:40px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>
+
+    <!-- CUMPLIMIENTO POR REPOSITOR -->
+    <div style="padding:48px 60px;page-break-after:always">
+      ${sectionTitle('CUMPLIMIENTO POR REPOSITOR', G)}
+      <div style="font-size:12px;color:${MUTED};margin-bottom:16px">Locales cargados vs. asignados — todos los repositores</div>
+      ${cumplBars()}
+      <div style="font-size:11px;color:#666;text-align:center;margin-top:40px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>
+
+    <!-- ALERTAS CRÍTICAS VENCIMIENTOS -->
+    <div style="padding:48px 60px;page-break-after:always">
+      ${sectionTitle('ALERTAS CRÍTICAS DE VENCIMIENTO', R)}
+      <div style="font-size:12px;color:${MUTED};margin-bottom:6px">Productos próximos a vencer detectados</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        ${kpiCard(alerts.length,'Alertas activas','todas CRÍTICAS',R)}
+        ${kpiCard(fmtN(alerts.reduce((s,r)=>s+(r.CANTIDAD||0),0)),'Unidades en riesgo','',Y)}
+        ${kpiCard(new Set(alerts.map(r=>r.PRODUCTO)).size,'SKUs afectados','',B)}
+      </div>
+      ${alertCards(alerts,10)}
+      <div style="font-size:11px;color:#666;text-align:center;margin-top:40px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>
+
+    <!-- ALERTAS AVERIADOS -->
+    ${aData.length?`<div style="padding:48px 60px;page-break-after:always">
+      ${sectionTitle('ALERTAS CRÍTICAS DE AVERIADOS', R)}
+      <div style="font-size:12px;color:${MUTED};margin-bottom:6px">Productos averiados detectados</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px">
+        ${kpiCard(aData.length,'Registros averiados','Entradas reportadas',R)}
+        ${kpiCard(fmtN(totalAU),'Unidades averiadas','Total en el período',R)}
+      </div>
+      ${aData.slice(0,10).map(r=>`
+        <div style="display:flex;border:1px solid ${BORDER};border-radius:8px;overflow:hidden;margin-bottom:10px;background:${CARD2}">
+          <div style="width:5px;background:${R};flex-shrink:0"></div>
+          <div style="padding:12px 14px;flex:1">
+            <div style="font-size:13px;font-weight:700;color:${TEXT}">${r.PRODUCTO}</div>
+            <div style="font-size:11px;color:${MUTED};margin:2px 0 8px">${r['PUNTO DE VENTA']}</div>
+            <div style="display:flex;gap:20px;align-items:center">
+              <div><div style="font-size:9px;text-transform:uppercase;color:${MUTED}">STOCK</div><div style="font-size:16px;font-weight:700;color:${TEXT}">${fmtN(r.CANTIDAD)} u.</div></div>
+              ${r.MOTIVO?`<div><div style="font-size:9px;text-transform:uppercase;color:${MUTED}">OBSERVACIÓN</div><div style="font-size:12px;font-weight:700;color:${Y}">${r.MOTIVO.toUpperCase()}</div></div>`:''}
+              <div style="margin-left:auto"><span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:${R}">CRÍTICO</span></div>
+            </div>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:11px;color:#666;text-align:center;margin-top:40px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>`:''}
+
+    <!-- BRECHA OPERATIVA -->
+    <div style="padding:48px 60px;page-break-after:always">
+      ${sectionTitle('BRECHA OPERATIVA — REPOSITORES', B)}
+      <div style="font-size:12px;color:${MUTED};margin-bottom:16px">Detalle de locales asignados y estado de carga por repositor</div>
+      ${brechaTable()}
+      <div style="font-size:11px;color:#666;text-align:center;margin-top:40px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>
+
+    <!-- RECOMENDACIONES -->
+    <div style="padding:48px 60px;page-break-after:always">
+      ${sectionTitle('RECOMENDACIONES ESTRATÉGICAS', Y)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        ${recs.map(r=>`<div style="background:${CARD};border:1px solid ${BORDER};border-radius:10px;padding:20px">
+          <div style="font-size:40px;font-weight:700;color:${CARD2};font-family:'DM Mono',monospace;line-height:1;margin-bottom:8px">${r.n}</div>
+          <div style="font-size:14px;font-weight:700;color:${TEXT};margin-bottom:8px">${r.t}</div>
+          <div style="font-size:12px;color:${MUTED};line-height:1.6">${r.txt}</div>
+        </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:#666;text-align:center;margin-top:40px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte}</div>
+    </div>
+
+    <!-- PRÓXIMOS PASOS -->
+    <div style="padding:48px 60px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+        <div>
+          ${sectionTitle('PRÓXIMOS PASOS', G)}
+          <ol style="padding-left:18px;font-size:14px;color:${MUTED};line-height:2.2">
+            <li>Reunión de equipo de campo — <strong style="color:${TEXT}">48 hs</strong></li>
+            <li>${alerts.length>0?'Retiro o activación de productos próximos a vencer':'Monitorear productos del próximo mes'}</li>
+            <li>Implementar sistema de carga quincenal</li>
+            <li>Nuevo corte de reporte — <strong style="color:${TEXT}">en 15 días</strong></li>
+          </ol>
+        </div>
+        <div>
+          ${sectionTitle('RESUMEN EJECUTIVO', B)}
+          ${[
+            {v:cumplPct+'%',l:'Cumplimiento de carga',c:cumplPct>=80?G:cumplPct>=50?Y:R},
+            {v:fmtN(sinCargar),l:'Locales sin reporte',c:R},
+            {v:fmtN(totalVU),l:'Unidades en riesgo de vencimiento',c:Y},
+            {v:alerts.length,l:'Alertas críticas activas',c:R},
+            {v:aData.length,l:'Productos averiados',c:'#f97316'},
+          ].map(i=>`<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+            <div style="font-size:30px;font-weight:700;font-family:'DM Mono',monospace;color:${i.c};min-width:70px;text-align:right">${i.v}</div>
+            <div style="font-size:13px;color:${MUTED}">${i.l}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:11px;color:#444;text-align:center;margin-top:60px">FRUTIKA | Reporte de Campo | Corte ${fmtCorte} | USO INTERNO</div>
+    </div>
+
+  </div>`;
+
+  // Inject into print div and trigger print
+  const printDiv = document.getElementById('informe-print');
+  printDiv.innerHTML = reportHTML;
+  printDiv.style.display = 'block';
+
+  // Hide everything else
+  document.querySelectorAll('body > *:not(#informe-print)').forEach(el => el.style.display='none');
+
+  window.print();
+
+  // Restore after print
+  setTimeout(()=>{
+    printDiv.style.display = 'none';
+    printDiv.innerHTML = '';
+    document.querySelectorAll('body > *:not(#informe-print)').forEach(el => el.style.display='');
+  }, 1000);
+}
+
+// ═══════════════════════════════════
 // INIT
 // ═══════════════════════════════════
 window.addEventListener('load',()=>{
@@ -1171,5 +1474,6 @@ window.addEventListener('load',()=>{
 });
 document.getElementById('fechaCorte').addEventListener('change',renderAll);
 </script>
+<div id="informe-print"></div>
 </body>
 </html>
