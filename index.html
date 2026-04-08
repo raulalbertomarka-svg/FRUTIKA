@@ -968,7 +968,7 @@ function parseCSV(csv){
   const headers=splitCSVLine(lines[0]).map(h=>h.trim());
   return lines.slice(1)
     .map(line=>{ const f=splitCSVLine(line); const r={}; headers.forEach((h,i)=>r[h]=(f[i]||'').trim()); return r; })
-    .filter(r=>r['FECHA DEL RELEVAMIENTO'] && r['FECHA DEL RELEVAMIENTO']!=='FECHA DEL RELEVAMIENTO');
+    .filter(r=>r['FECHA DEL RELEVAMIENTO'] && r['FECHA DEL RELEVAMIENTO']!=='FECHA DEL RELEVAMIENTO' && r['NOMBRE DEL RELEVADOR']);
 }
 
 // Robust CSV line splitter (handles quoted commas)
@@ -987,15 +987,16 @@ function splitCSVLine(line){
 // Format a date string to DD/MM/YYYY
 function normDate(s){
   if(!s||!s.trim()) return '';
+  s=s.trim();
   // Already DD/MM/YYYY
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s.trim())) return s.trim();
-  // YYYY-MM-DD
-  const m=s.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // YYYY-MM-DD (with optional time)
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m) return `${m[3]}/${m[2]}/${m[1]}`;
-  // MM/DD/YYYY (Google Sheets US format)
-  const m2=s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  // Google Forms: M/D/YYYY, H:MM:SS a. m./p. m.  OR  M/D/YYYY H:MM:SS
+  const m2=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if(m2) return `${String(m2[2]).padStart(2,'0')}/${String(m2[1]).padStart(2,'0')}/${m2[3]}`;
-  return s.trim();
+  return s;
 }
 
 // Split raw rows into VENCER and AVERIADOS arrays
@@ -1005,39 +1006,46 @@ function splitRows(rows){
     const fecha  = normDate(r['FECHA DEL RELEVAMIENTO']);
     const rel    = (r['NOMBRE DEL RELEVADOR']||'').trim();
     const pdv    = (r['PUNTO DE VENTA']||'').trim();
-    const tieneV = (r['TIENE PRODUCTOS PROXIMOS A VENCER? SI/NO']||'').trim().toUpperCase();
-    const tieneA = (r['TIENE PRODUCTOS AVERIADOS? SI/NO']||'').trim().toUpperCase();
+    const tieneV = (r['TIENE PRODUCTOS PROXIMOS A VENCER? SI/NO']||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const tieneA = (r['TIENE PRODUCTOS AVERIADOS? SI/NO']||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
-    if(tieneV==='SI' || tieneV==='SÍ'){
+    if(tieneV==='SI'){
       const prod  = (r['PRODUCTOS PROXIMOS A VENCER']||'').trim();
       const vence = normDate(r['FECHA DE VENCIMIENTO']);
       const cant  = parseFloat(r['CANTIDAD DE PRODUCTOS PROXIMOS A VENCER'])||0;
       if(prod){
+        // Extract barcode prefix "7840... - Product name"
+        let cbarV='', prodNameV=prod;
+        const bcmV=prod.match(/^(\d{8,14})\s*-\s*(.+)$/);
+        if(bcmV){ cbarV=bcmV[1]; prodNameV=bcmV[2].trim(); }
         vencer.push({
           'FECHA': fecha,
           'RELEVADOR': rel,
           'PUNTO DE VENTA': pdv,
           'TIENE PROD. A VENCER': 'SI',
-          'CODIGO DE BARRA': '',
-          'PRODUCTO': prod,
+          'CODIGO DE BARRA': cbarV,
+          'PRODUCTO': prodNameV,
           'CUANDO VENCE': vence,
           'CANTIDAD': cant
         });
       }
     }
 
-    if(tieneA==='SI' || tieneA==='SÍ'){
+    if(tieneA==='SI'){
       const prod  = (r['PRODUCTOS AVERIADOS']||'').trim();
       const cant  = parseFloat(r['CANTIDAD DE PRODUCTOS AVERIADOS'])||0;
       const motivo= (r['OBSERVACION DEL PRODUCTO AVERIADO']||'').trim();
       if(prod){
+        let cbarA='', prodNameA=prod;
+        const bcmA=prod.match(/^(\d{8,14})\s*-\s*(.+)$/);
+        if(bcmA){ cbarA=bcmA[1]; prodNameA=bcmA[2].trim(); }
         aver.push({
           'FECHA': fecha,
           'RELEVADOR': rel,
           'PUNTO DE VENTA': pdv,
           'TIENE PROD. AVERIADOS': 'SI',
-          'CODIGO DE BARRA': '',
-          'PRODUCTO': prod,
+          'CODIGO DE BARRA': cbarA,
+          'PRODUCTO': prodNameA,
           'CANTIDAD': cant,
           'MOTIVO': motivo
         });
@@ -1057,10 +1065,15 @@ async function loadSheetData(manual=false){
     if(!rows.length) throw new Error('Hoja vacía o sin datos');
 
     const {vencer, aver}=splitRows(rows);
+    console.log(`Parsed: ${rows.length} filas → ${vencer.length} venc, ${aver.length} aver`);
 
-    // Update global arrays in place (keep RR/ruteo untouched)
-    if(vencer.length){ RV.length=0; vencer.forEach(r=>RV.push(r)); }
-    if(aver.length)  { RA.length=0; aver.forEach(r=>RA.push(r));   }
+    // Update global arrays in place — update even if only one type has data
+    if(vencer.length||aver.length){
+      RV.length=0; vencer.forEach(r=>RV.push(r));
+      RA.length=0; aver.forEach(r=>RA.push(r));
+    } else {
+      throw new Error('Filas encontradas pero sin productos vencer/averiados marcados como SI');
+    }
 
     const now=new Date();
     const t=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
