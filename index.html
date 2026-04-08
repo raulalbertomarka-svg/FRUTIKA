@@ -436,7 +436,13 @@ let ALL_Q=[];       // [{lbl,from,to,sort,monthKey,monthLbl}]
 let selectedQ=[];   // array of sort keys currently active
 
 function buildQuincenas(){
-  const all=[...RV,...RA];
+  // Include all data sources: vencer, averiados, pure visits + always current month
+  const all=[...RV,...RA,...RVISITAS];
+
+  // Always add current month so it shows even if only visits exist
+  const now=new Date();
+  all.push({'FECHA': `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`});
+
   const qm={};
   all.forEach(r=>{
     const d=parseDate(r.FECHA);if(!d)return;
