@@ -1105,12 +1105,8 @@ async function loadSheetData(manual=false){
     const rows=parseCSV(csv);
     if(!rows.length) throw new Error('Hoja vacía o sin datos');
 
-    const {vencer, aver}=splitRows(rows);
-    console.log(`Parsed: ${rows.length} filas → ${vencer.length} venc, ${aver.length} aver`);
-
-    if(!vencer.length&&!aver.length){
-      throw new Error('Filas encontradas pero sin productos vencer/averiados marcados como SI');
-    }
+    const {vencer, aver, visitas}=splitRows(rows);
+    console.log(`Parsed: ${rows.length} filas → ${vencer.length} venc, ${aver.length} aver, ${visitas.length} visitas`);
 
     // MERGE: combine historical data (Excel) + live data (Sheets), no duplicates
     function mergeData(existing, incoming){
