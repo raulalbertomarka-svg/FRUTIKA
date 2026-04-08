@@ -1067,13 +1067,29 @@ async function loadSheetData(manual=false){
     const {vencer, aver}=splitRows(rows);
     console.log(`Parsed: ${rows.length} filas → ${vencer.length} venc, ${aver.length} aver`);
 
-    // Update global arrays in place — update even if only one type has data
-    if(vencer.length||aver.length){
-      RV.length=0; vencer.forEach(r=>RV.push(r));
-      RA.length=0; aver.forEach(r=>RA.push(r));
-    } else {
+    if(!vencer.length&&!aver.length){
       throw new Error('Filas encontradas pero sin productos vencer/averiados marcados como SI');
     }
+
+    // MERGE: combine historical data (Excel) + live data (Sheets), no duplicates
+    function mergeData(existing, incoming){
+      const key=r=>`${r['FECHA']}|${r['RELEVADOR']}|${r['PUNTO DE VENTA']}|${r['PRODUCTO']}`;
+      const existingKeys=new Set(existing.map(key));
+      let added=0;
+      incoming.forEach(r=>{
+        const k=key(r);
+        if(!existingKeys.has(k)){
+          existing.push(r);
+          existingKeys.add(k);
+          added++;
+        }
+      });
+      return added;
+    }
+
+    const addedV=mergeData(RV, vencer);
+    const addedA=mergeData(RA, aver);
+    console.log(`Merged: +${addedV} venc nuevos, +${addedA} aver nuevos`);
 
     const now=new Date();
     const t=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
