@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Frutika — Tablero de Campo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--surface3:#2a2f45;
+  --border:#2e3347;--text:#e8eaf0;--muted:#6b7280;--faint:#3d4258;
+  --g:#22c55e;--g2:#16a34a;--r:#ef4444;--r2:#dc2626;
+  --b:#3b82f6;--y:#f59e0b;--o:#f97316;
+  --shadow:0 4px 24px rgba(0,0,0,.45);--radius:14px;--radius-sm:8px;
+}
+.light{
+  --bg:#f0f2f8;--surface:#fff;--surface2:#e8ecf5;--surface3:#dce1ef;
+  --border:#cdd3e3;--text:#111827;--muted:#6b7280;--faint:#e2e6f3;
+  --shadow:0 4px 20px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s;}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);}
+.brand h1{font-size:15px;font-weight:700;letter-spacing:.04em;}
+.brand span{font-size:11px;color:var(--muted);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.theme-btn{width:44px;height:24px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);cursor:pointer;position:relative;transition:background .3s;}
+.theme-btn::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:var(--g);border-radius:50%;transition:transform .25s;}
+.light .theme-btn::after{transform:translateX(20px);}
+.theme-lbl{font-size:12px;color:var(--muted);}
+
+/* ── CORTE BAR ── */
+.corte-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 24px;background:var(--surface);border-bottom:2px solid var(--border);}
+.corte-bar label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.corte-bar input[type="date"]{background:var(--surface2);color:var(--text);border:1.5px solid var(--g);border-radius:var(--radius-sm);padding:6px 12px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;outline:none;cursor:pointer;}
+.corte-badge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);font-size:12px;font-weight:600;color:var(--g);}
+.corte-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--g);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── FILTER BAR ── */
+.qbar{display:flex;align-items:center;gap:10px;padding:8px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.qbar-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+.qbar-selector{display:flex;align-items:center;gap:8px;flex:1;}
+.q-select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 10px;font-family:'DM Mono',monospace;font-size:12px;outline:none;cursor:pointer;min-width:140px;}
+.q-select:focus{border-color:var(--g);}
+.q-tags{display:flex;flex-wrap:wrap;gap:5px;flex:1;}
+.q-tag{display:flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;background:var(--g);color:#fff;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.q-tag .x{cursor:pointer;opacity:.7;font-size:13px;line-height:1;padding-left:2px;}.q-tag .x:hover{opacity:1;}
+.q-tag.month-tag{background:var(--b);}
+.fdiv{width:1px;height:22px;background:var(--border);}
+.rbadge{font-size:12px;color:var(--muted);background:var(--surface2);padding:4px 10px;border-radius:20px;border:1px solid var(--border);}
+.rbadge strong{color:var(--text);}
+.qbtn{padding:4px 11px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .18s;white-space:nowrap;}
+.qbtn:hover,.qbtn.active{background:var(--g);color:#fff;border-color:var(--g);}
+.rbadge{font-size:12px;color:var(--muted);background:var(--surface2);padding:4px 10px;border-radius:20px;border:1px solid var(--border);}
+.rbadge strong{color:var(--text);}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{padding:11px 18px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:color .2s,border-color .2s;white-space:nowrap;user-select:none;}
+.tab.at{color:var(--text);border-bottom-color:var(--g);}
+.tab.at-r{color:var(--text);border-bottom-color:var(--r);}
+.tab.at-b{color:var(--text);border-bottom-color:var(--b);}
+.tab.at-y{color:var(--text);border-bottom-color:var(--y);}
+
+/* ── LAYOUT ── */
+.main{padding:20px 24px;}
+.sec{display:none;}.sec.on{display:block;}
+.krow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.krow3{grid-template-columns:repeat(3,1fr);}
+.panels{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:16px;}
+.panels.eq{grid-template-columns:1fr 1fr;}
+.panels.full{grid-template-columns:1fr;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
+
+/* ── KPI ── */
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .2s;}
+.kpi:hover{transform:translateY(-2px);}
+.kpi-stripe{position:absolute;top:0;left:0;width:4px;height:100%;border-radius:var(--radius) 0 0 var(--radius);}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.kpi-val{font-size:32px;font-weight:700;line-height:1;font-family:'DM Mono',monospace;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:5px;}
+.kpi-pct{font-size:14px;font-weight:700;margin-top:4px;}
+
+/* ── PANEL TITLE ── */
+.ptitle{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.ptitle .d{width:7px;height:7px;border-radius:50%;}
+
+/* ── BAR CHART ── */
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.brank{font-size:9px;font-weight:700;width:18px;height:18px;border-radius:4px;background:var(--surface2);color:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brank.top{background:var(--g);color:#fff;}
+.brank.top-r{background:var(--r);color:#fff;}
+.blbl{font-size:11px;color:var(--text);min-width:155px;max-width:155px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.btrack{flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.bfill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.bval{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);min-width:40px;text-align:right;}
+
+/* ── STACKED BAR (cumplimiento) ── */
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sname{font-size:11px;min-width:130px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.strack{flex:1;height:14px;background:var(--faint);border-radius:4px;overflow:hidden;display:flex;}
+.sfill-c{height:100%;background:var(--g);transition:width .5s;}
+.sfill-p{height:100%;background:var(--r);opacity:.5;}
+.spct{font-size:10px;font-family:'DM Mono',monospace;min-width:38px;text-align:right;font-weight:600;}
+
+/* ── ACTIVITY BAR ── */
+.activity-chart{display:flex;align-items:flex-end;gap:3px;height:110px;padding:6px 0 4px;overflow:hidden;}
+.act-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;}
+.act-bar{width:100%;border-radius:3px 3px 0 0;transition:height .5s cubic-bezier(.4,0,.2,1);cursor:default;}
+.act-bar:hover{opacity:.75;}
+.act-lbl{font-size:8px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;}
+
+/* ── ALERT CARDS ── */
+.alert-grid{display:flex;flex-direction:column;gap:10px;}
+.alert-card{display:flex;align-items:stretch;border-radius:var(--radius-sm);border:1px solid var(--border);overflow:hidden;background:var(--surface2);}
+.alert-stripe{width:5px;flex-shrink:0;}
+.alert-body{padding:12px 14px;flex:1;}
+.alert-prod{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.alert-pdv{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.alert-meta{display:flex;gap:20px;}
+.alert-meta-item label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:2px;}
+.alert-meta-item .v{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;}
+.badge-crit{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.05em;}
+.bc-r{background:rgba(239,68,68,.15);color:var(--r);}
+.bc-y{background:rgba(245,158,11,.15);color:var(--y);}
+.bc-g{background:rgba(34,197,94,.15);color:var(--g);}
+
+/* ── TABLE ── */
+.twrap{max-height:300px;overflow-y:auto;border-radius:var(--radius-sm);}
+.twrap::-webkit-scrollbar{width:4px;}.twrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.dt{width:100%;border-collapse:collapse;font-size:12px;}
+.dt th{text-align:left;padding:7px 10px;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;}
+.dt td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);}
+.dt tr:hover td{background:var(--surface2);}
+.dt tr:last-child td{border-bottom:none;}
+.mono{font-family:'DM Mono',monospace;font-size:11px;}
+
+/* ── RECOMENDACIONES ── */
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.rec-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;position:relative;}
+.rec-num{font-size:36px;font-weight:700;color:var(--faint);font-family:'DM Mono',monospace;line-height:1;margin-bottom:6px;}
+.rec-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.rec-text{font-size:12px;color:var(--muted);line-height:1.55;}
+
+/* ── ALERTA BOX ── */
+.abox{display:flex;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);border-left:4px solid;margin-bottom:14px;font-size:12.5px;line-height:1.5;}
+.abox.danger{border-color:var(--r);background:rgba(239,68,68,.07);}
+.abox.warn{border-color:var(--y);background:rgba(245,158,11,.07);}
+
+/* ── CADENA GRID ── */
+.cadena-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cadena-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;text-align:center;}
+.cadena-name{font-size:11px;font-weight:700;color:var(--text);}
+.cadena-count{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--g);}
+.cadena-sub{font-size:9px;color:var(--muted);}
+
+/* ── EMPTY / ANIM ── */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:13px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.panel,.kpi{animation:fadeUp .3s ease both;}
+
+/* ── LOADER ── */
+.sync-bar{display:flex;align-items:center;gap:10px;padding:7px 24px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.sync-dot.live{background:var(--g);box-shadow:0 0 6px var(--g);animation:pulse 2s infinite;}
+.sync-dot.loading{background:var(--y);animation:spin 1s linear infinite;}
+.sync-dot.error{background:var(--r);}
+@keyframes spin{to{transform:rotate(360deg);border-radius:50%;}}
+.sync-btn{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .18s;}
+.sync-btn:hover{border-color:var(--g);color:var(--g);}
+
+/* ── PRINT / RESPONSIVE ── */
+@media(max-width:900px){
+  .krow{grid-template-columns:1fr 1fr;}
+  .panels,.panels.eq{grid-template-columns:1fr;}
+  .rec-grid{grid-template-columns:1fr;}
+  .cadena-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <div>
+      <h1>FRUTIKA &nbsp;|&nbsp; <span style="font-weight:400">Tablero de Campo</span></h1>
+      <span>Vencimientos · Averiados · Cumplimiento</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="theme-lbl" id="thlbl">🌙 Nocturno</span>
+    <div class="theme-btn" id="thbtn" onclick="toggleTheme()"></div>
+  </div>
+</div>
+
+<!-- SYNC BAR -->
+<div class="sync-bar">
+  <div class="sync-dot live" id="sync-dot"></div>
+  <span id="sync-status">Conectado a Google Sheets — actualizando automáticamente</span>
+  <button class="sync-btn" onclick="loadSheetData(true)">↻ Actualizar ahora</button>
+  <span id="sync-time" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px"></span>
+</div>
+
+<!-- FECHA DE CORTE -->
+<div class="corte-bar">
+  <label>📅 FECHA DE CORTE</label>
+  <input type="date" id="fechaCorte" value="2026-03-30" min="2026-01-01" max="2026-03-30" onchange="renderAll()"/>
+  <div class="corte-badge"><div class="dot"></div><span id="corteLbl">Corte: 30/03/2026</span></div>
+  <div style="margin-left:auto;font-size:12px;color:var(--muted)">Los datos se filtran hasta la fecha de corte seleccionada</div>
+</div>
+
+<!-- FILTER BAR (quincenas) -->
+<div class="qbar">
+  <span class="qbar-label">FILTRO</span>
+  <div class="qbar-selector">
+    <select class="q-select" id="q-select" onchange="addQuincena(this)">
+      <option value="">+ Agregar quincena…</option>
+    </select>
+    <button class="qbtn" onclick="addMonth()" title="Agregar mes completo (Q1+Q2)">+ Mes completo</button>
+    <div class="fdiv"></div>
+    <div class="q-tags" id="q-tags"></div>
+    <button class="qbtn" id="btn-todo" onclick="setTodo()" style="white-space:nowrap">Todo</button>
+  </div>
+  <div class="fdiv"></div>
+  <div class="rbadge" id="rbadge">—</div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab at"    id="t0" onclick="switchTab(0,this)">📊 Resumen Ejecutivo</div>
+  <div class="tab"       id="t1" onclick="switchTab(1,this)">✅ Cumplimiento</div>
+  <div class="tab"       id="t2" onclick="switchTab(2,this)">📦 Vencimientos</div>
+  <div class="tab"       id="t3" onclick="switchTab(3,this)">⚠️ Averiados</div>
+  <div class="tab"       id="t4" onclick="switchTab(4,this)">💡 Recomendaciones</div>
+</div>
+
+<div class="main">
+
+<!-- ══════════════ TAB 0: RESUMEN EJECUTIVO ══════════════ -->
+<div class="sec on" id="s0">
+  <div class="krow" id="kpi-resumen"></div>
+  <div class="panels">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--g)"></div>Cumplimiento por Repositor</div>
+      <div id="chart-cumpl-resumen"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--r)"></div>Alertas Críticas Activas (≤30 días)</div>
+      <div id="alerts-resumen"></div>
+    </div>
+  </div>
+  <div class="panels eq">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--b)"></div>Cobertura por Cadena</div>
+      <div id="chart-cadena-resumen"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--y)"></div>Actividad de Carga por Quincena</div>
+      <div id="timeline-resumen" class="activity-chart"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB 1: CUMPLIMIENTO ══════════════ -->
+<div class="sec" id="s1">
+  <div class="krow" id="kpi-cumpl"></div>
+  <div id="abox-cumpl"></div>
+  <div class="panels">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--g)"></div>Locales Cargados vs. Asignados — por Repositor</div>
+      <div id="chart-cumpl-main"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--b)"></div>Cobertura por Cadena</div>
+      <div id="chart-cadena-main"></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="ptitle"><div class="d" style="background:var(--muted)"></div>Brecha Operativa — Detalle por Repositor</div>
+    <div class="twrap">
+      <table class="dt">
+        <thead><tr><th>Repositor</th><th>Asignados</th><th>Cargados</th><th>Pendientes</th><th>Cumpl.</th></tr></thead>
+        <tbody id="tbl-brecha"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB 2: VENCIMIENTOS ══════════════ -->
+<div class="sec" id="s2">
+  <div class="krow" id="kpi-vencer"></div>
+  <div class="panels">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--g)"></div>Top 10 Productos por Unidades</div>
+      <div id="chart-prod-v"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--b)"></div>Top 10 Puntos de Venta</div>
+      <div id="chart-pdv-v"></div>
+    </div>
+  </div>
+  <div class="panels eq">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--r)"></div>⚠ Alertas Críticas — Vencen en ≤30 días</div>
+      <div id="alerts-v"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--y)"></div>Actividad por Quincena</div>
+      <div id="timeline-v" class="activity-chart"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ptitle"><div class="d" style="background:var(--muted)"></div>Detalle de Registros <span id="cnt-v" style="margin-left:auto;font-weight:400;font-size:11px"></span></div>
+    <div class="twrap"><table class="dt"><thead><tr><th>Fecha</th><th>Relevador</th><th>Punto de Venta</th><th>Código</th><th>Producto</th><th>Vence</th><th>Cant.</th></tr></thead><tbody id="tbl-v"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB 3: AVERIADOS ══════════════ -->
+<div class="sec" id="s3">
+  <div class="krow krow3" id="kpi-aver"></div>
+  <div id="abox-aver"></div>
+  <div class="panels">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--r)"></div>Top 10 Productos Averiados</div>
+      <div id="chart-prod-a"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--b)"></div>Top 10 Puntos de Venta</div>
+      <div id="chart-pdv-a"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ptitle"><div class="d" style="background:var(--muted)"></div>Detalle de Averiados <span id="cnt-a" style="margin-left:auto;font-weight:400;font-size:11px"></span></div>
+    <div class="twrap"><table class="dt"><thead><tr><th>Fecha</th><th>Relevador</th><th>Punto de Venta</th><th>Código</th><th>Producto</th><th>Cant.</th><th>Motivo</th></tr></thead><tbody id="tbl-a"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB 4: RECOMENDACIONES ══════════════ -->
+<div class="sec" id="s4">
+  <div class="panel" style="margin-bottom:16px">
+    <div class="ptitle"><div class="d" style="background:var(--y)"></div>Recomendaciones Estratégicas — generadas automáticamente</div>
+    <div class="rec-grid" id="rec-grid"></div>
+  </div>
+  <div class="panels eq">
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--g)"></div>Próximos Pasos</div>
+      <div id="proximos-pasos"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><div class="d" style="background:var(--b)"></div>Resumen Final del Período</div>
+      <div id="resumen-final"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════════
+// DATA
+// ═══════════════════════════════════
+const RV = [{"FECHA": "19/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "AHO AHO COMERCIAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 22.0, "PDV_NORM": "AHO AHO COMERCIAL", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 60.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 24.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011833", "PRODUCTO": "Agua Funcional Care 500 ml Génesis", "CUANDO VENCE": "15/04/2026", "CANTIDAD": 34.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010782", "PRODUCTO": "Chimichurri Sin Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 12.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "25/04/2026", "CANTIDAD": 25.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "06/06/2026", "CANTIDAD": 10.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 120.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012267", "PRODUCTO": "Extracto de Tomate Doypack 140 g Perita", "CUANDO VENCE": "", "CANTIDAD": 0.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011833", "PRODUCTO": "Agua Funcional Care 500 ml Génesis", "CUANDO VENCE": "15/05/2026", "CANTIDAD": 36.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "27/04/2026", "CANTIDAD": 48.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "13/04/2026", "CANTIDAD": 100.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "21/04/2026", "CANTIDAD": 60.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 18.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 120.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 24.0, "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "03/02/2026", "RELEVADOR": "TOBIAS BURGOS", "PUNTO DE VENTA": "CASA RICA - LOS LAURELES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "10/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "CASA RICA - LOS LAURELES", "REP_NORM": "TOBIAS BURGOS"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "21/04/2026", "CANTIDAD": 120.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 60.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "21/01/2026", "CANTIDAD": 12.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 120.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010645", "PRODUCTO": "Ketchup Picante 400 g Frutika", "CUANDO VENCE": "04/02/2026", "CANTIDAD": 12.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 12.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 120.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 90.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010782", "PRODUCTO": "Chimichurri Sin Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 12.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011833", "PRODUCTO": "Agua Funcional Care 500 ml Génesis", "CUANDO VENCE": "15/05/2026", "CANTIDAD": 36.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 36.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 120.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "10/04/2026", "CANTIDAD": 120.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 20.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "EL AHORRAZO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "04/02/2026", "CANTIDAD": 1.0, "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "19/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "GRAN VIA - LUQUE", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 31.0, "PDV_NORM": "GRAN VIA - LUQUE", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "19/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "GRAN VIA - LUQUE", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010782", "PRODUCTO": "Chimichurri Sin Picante 400 g Frutika", "CUANDO VENCE": "29/03/2026", "CANTIDAD": 22.0, "PDV_NORM": "GRAN VIA - LUQUE", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "28/02/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011178", "PRODUCTO": "Promo Pack x2 Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 30.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 2.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 5.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "06/02/2026", "CANTIDAD": 5.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "03/02/2026", "CANTIDAD": 1.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "26/01/2026", "CANTIDAD": 7.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 22.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 16.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "06/01/2026", "CANTIDAD": 4.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 22.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "06/02/2026", "CANTIDAD": 9.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011178", "PRODUCTO": "Promo Pack x2 Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "28/02/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011932", "PRODUCTO": "Jugo 100% Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 12.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "GRAN VIA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "GRAN VIA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "GRAN VIA - ROYAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 51.0, "PDV_NORM": "GRAN VIA - ROYAL", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "09/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "GRAN VIA - ROYAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "22/01/2026", "CANTIDAD": 4.0, "PDV_NORM": "GRAN VIA - ROYAL", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "09/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "GRAN VIA - ROYAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "GRAN VIA - ROYAL", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "20/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "GRAN VIA - ROYAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "22/01/2026", "CANTIDAD": 4.0, "PDV_NORM": "GRAN VIA - ROYAL", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "KINGO SUPERMERCADO -  MARIANO ROQUE ALONSO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "22/01/2026", "CANTIDAD": 9.0, "PDV_NORM": "KINGO SUPERMERCADO -  MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "05/01/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "15/02/2026", "CANTIDAD": 40.0, "PDV_NORM": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "05/01/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 60.0, "PDV_NORM": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "24/03/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "01/04/2026", "CANTIDAD": 3.0, "PDV_NORM": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "24/03/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 1.0, "PDV_NORM": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "LA BOMBA - AREGUA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "26/05/2026", "CANTIDAD": 3.0, "PDV_NORM": "LA BOMBA - AREGUA", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "LA BOMBA - AREGUA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "25/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "LA BOMBA - AREGUA", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "LA BOMBA - AREGUA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "13/04/2026", "CANTIDAD": 0.0, "PDV_NORM": "LA BOMBA - AREGUA", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 22.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "26/03/2026", "CANTIDAD": 23.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001018", "PRODUCTO": "Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 62.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "27/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 110.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "27/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011574", "PRODUCTO": "Salsa Pizza Tetra 220 g Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "27/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 25.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "27/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 17.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "27/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "11/02/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "11/02/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 22.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "11/02/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "15/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "27/01/2026", "CANTIDAD": 10.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "15/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 9.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "15/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "LA BOMBA - PROCERES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "LA BOMBA - PROCERES", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "27/01/2026", "CANTIDAD": 16.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 14.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 60.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "21/04/2026", "CANTIDAD": 40.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011703", "PRODUCTO": "Agua Mineral Sin Gas 2,25 l Génesis", "CUANDO VENCE": "09/04/2026", "CANTIDAD": 10.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 60.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010119", "PRODUCTO": "Extracto de Tomate 140 g Frutika", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 35.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012274", "PRODUCTO": "Extracto de Tomate Doypack 70 g Perita", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 120.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 2.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011703", "PRODUCTO": "Agua Mineral Sin Gas 2,25 l Génesis", "CUANDO VENCE": "01/04/2026", "CANTIDAD": 2.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011833", "PRODUCTO": "Agua Funcional Care 500 ml Génesis", "CUANDO VENCE": "16/05/2026", "CANTIDAD": 24.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 4.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 10.0, "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "21/01/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "LA BOMBA - TERMINAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "17/03/2026", "CANTIDAD": 18.0, "PDV_NORM": "LA BOMBA - TERMINAL", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "24/03/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "LA BOMBA - TERMINAL", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "13/04/2026", "CANTIDAD": 60.0, "PDV_NORM": "LA BOMBA - TERMINAL", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "23/02/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "LOS JARDINES - VILLA ADELA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 39.0, "PDV_NORM": "LOS JARDINES - VILLA ADELA", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EMBOSCADA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "SUPERMERCADO LT - EMBOSCADA", "REP_NORM": "YURIA VERA"}, {"FECHA": "12/03/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EMBOSCADA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 3.0, "PDV_NORM": "SUPERMERCADO LT - EMBOSCADA", "REP_NORM": "YURIA VERA"}, {"FECHA": "12/03/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EMBOSCADA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "26/05/2026", "CANTIDAD": 4.0, "PDV_NORM": "SUPERMERCADO LT - EMBOSCADA", "REP_NORM": "YURIA VERA"}, {"FECHA": "16/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EMBOSCADA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "SUPERMERCADO LT - EMBOSCADA", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 5.0, "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 9.0, "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "16/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "19/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "27/04/2026", "CANTIDAD": 4.0, "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "19/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 2.0, "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - RINCON", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 2.0, "PDV_NORM": "SUPERMERCADO LT - RINCON", "REP_NORM": "YURIA VERA"}, {"FECHA": "12/03/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - RINCON", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011833", "PRODUCTO": "Agua Funcional Care 500 ml Génesis", "CUANDO VENCE": "19/06/2026", "CANTIDAD": 40.0, "PDV_NORM": "SUPERMERCADO LT - RINCON", "REP_NORM": "YURIA VERA"}, {"FECHA": "16/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - VILLA HAYES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 28.0, "PDV_NORM": "SUPERMERCADO LT - VILLA HAYES", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - VILLA MADRID", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 5.0, "PDV_NORM": "SUPERMERCADO LT - VILLA MADRID", "REP_NORM": "YURIA VERA"}, {"FECHA": "12/03/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - VILLA MADRID", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "27/04/2026", "CANTIDAD": 0.0, "PDV_NORM": "SUPERMERCADO LT - VILLA MADRID", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - VILLA MADRID", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 5.0, "PDV_NORM": "SUPERMERCADO LT - VILLA MADRID", "REP_NORM": "YURIA VERA"}, {"FECHA": "16/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - VILLA MADRID", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "26/05/2026", "CANTIDAD": 8.0, "PDV_NORM": "SUPERMERCADO LT - VILLA MADRID", "REP_NORM": "YURIA VERA"}, {"FECHA": "16/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - VILLA MADRID", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 3.0, "PDV_NORM": "SUPERMERCADO LT - VILLA MADRID", "REP_NORM": "YURIA VERA"}, {"FECHA": "03/01/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - 4 MOJONES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 17.0, "PDV_NORM": "HIPERMERCADO LUISITO - 4 MOJONES", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "03/01/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - 4 MOJONES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 18.0, "PDV_NORM": "HIPERMERCADO LUISITO - 4 MOJONES", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "30/03/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - 4 MOJONES", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "13/04/2026", "CANTIDAD": 50.0, "PDV_NORM": "HIPERMERCADO LUISITO - 4 MOJONES", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "15/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "25/03/2026", "CANTIDAD": 35.0, "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "15/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010782", "PRODUCTO": "Chimichurri Sin Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "25/03/2026", "CANTIDAD": 33.0, "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "27/04/2026", "CANTIDAD": 18.0, "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "24/05/2026", "CANTIDAD": 18.0, "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ITAUGUA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - ITAUGUA", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "14/01/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ITAUGUA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 11.0, "PDV_NORM": "HIPERMERCADO LUISITO - ITAUGUA", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "22/04/2026", "CANTIDAD": 7.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 8.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "01/04/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "01/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "22/04/2026", "CANTIDAD": 10.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 8.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "01/04/2026", "CANTIDAD": 6.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "03/04/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "02/04/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "01/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 72.0, "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "19/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LUQUE", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 26.0, "PDV_NORM": "HIPERMERCADO LUISITO - LUQUE", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "28/01/2026", "CANTIDAD": 9.0, "PDV_NORM": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CUANDO VENCE": "06/01/2026", "CANTIDAD": 11.0, "PDV_NORM": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "18/02/2026", "CANTIDAD": 2.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "26/03/2026", "CANTIDAD": 32.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "16/03/2026", "CANTIDAD": 5.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 17.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001018", "PRODUCTO": "Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 9.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "21/04/2026", "CANTIDAD": 54.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 18.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 9.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "26/03/2026", "CANTIDAD": 36.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 28.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 1.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011178", "PRODUCTO": "Promo Pack x2 Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "18/02/2026", "CANTIDAD": 2.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011178", "PRODUCTO": "Promo Pack x2 Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "09/02/2026", "CANTIDAD": 2.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 45.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "23/03/2026", "CANTIDAD": 60.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 5.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "18/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "09/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CUANDO VENCE": "29/01/2026", "CANTIDAD": 0.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 54.0, "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "22/04/2026", "CANTIDAD": 60.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 90.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 12.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 60.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "24/04/2026", "CANTIDAD": 90.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "25/04/2026", "CANTIDAD": 40.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "13/04/2026", "CANTIDAD": 24.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117012243", "PRODUCTO": "Jugo 100% Naranja Slim 200 ml Frutika", "CUANDO VENCE": "21/04/2026", "CANTIDAD": 10.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 20.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "15/04/2026", "CANTIDAD": 25.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 5.0, "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO PUEBLO - ARTIGAS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 12.0, "PDV_NORM": "HIPERMERCADO PUEBLO - ARTIGAS", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO PUEBLO - ARTIGAS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 27.0, "PDV_NORM": "HIPERMERCADO PUEBLO - ARTIGAS", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO PUEBLO - ARTIGAS", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "13/06/2026", "CANTIDAD": 21.0, "PDV_NORM": "HIPERMERCADO PUEBLO - ARTIGAS", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "19/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "SUPERMERCADO EL PUEBLO - LAMBARE", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "SUPERMERCADO EL PUEBLO - LAMBARE", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "19/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "SUPERMERCADO EL PUEBLO - LAMBARE", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "26/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "SUPERMERCADO EL PUEBLO - LAMBARE", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 18.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CUANDO VENCE": "22/01/2026", "CANTIDAD": 1.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010645", "PRODUCTO": "Ketchup Picante 400 g Frutika", "CUANDO VENCE": "04/02/2026", "CANTIDAD": 6.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 14.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 13.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 7.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "20/02/2026", "CANTIDAD": 1.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001018", "PRODUCTO": "Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 59.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010645", "PRODUCTO": "Ketchup Picante 400 g Frutika", "CUANDO VENCE": "04/02/2026", "CANTIDAD": 6.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010782", "PRODUCTO": "Chimichurri Sin Picante 400 g Frutika", "CUANDO VENCE": "11/03/2026", "CANTIDAD": 1.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "04/02/2026", "CANTIDAD": 5.0, "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MICAELA PAREDES", "PUNTO DE VENTA": "CADENA REAL - ACCESO SUR", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 30.0, "PDV_NORM": "CADENA REAL - ACCESO SUR", "REP_NORM": "MICAELA PAREDES"}, {"FECHA": "14/01/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "CADENA REAL - CAPIATA R2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 8.0, "PDV_NORM": "CADENA REAL - CAPIATA R2", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "06/02/2026", "RELEVADOR": "TOBIAS BURGOS", "PUNTO DE VENTA": "CADENA REAL - FERNANDO DE LA MORA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "06/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "CADENA REAL - FERNANDO DE LA MORA", "REP_NORM": "TOBIAS BURGOS"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011932", "PRODUCTO": "Jugo 100% Naranja 1 l Frutika", "CUANDO VENCE": "08/01/2026", "CANTIDAD": 6.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 4.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "07/01/2026", "CANTIDAD": 11.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "06/01/2026", "CANTIDAD": 2.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "07/01/2026", "CANTIDAD": 2.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 2.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 10.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 29.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001018", "PRODUCTO": "Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 3.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "23/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 7.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "23/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001018", "PRODUCTO": "Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 8.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "23/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 1.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "23/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "02/02/2026", "CANTIDAD": 0.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "23/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 28.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "23/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CUANDO VENCE": "04/02/2026", "CANTIDAD": 10.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "28/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010645", "PRODUCTO": "Ketchup Picante 400 g Frutika", "CUANDO VENCE": "04/03/2026", "CANTIDAD": 10.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "28/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 14.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "28/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001018", "PRODUCTO": "Nectar de Naranja 1 l Frutika", "CUANDO VENCE": "30/03/2026", "CANTIDAD": 6.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "28/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CUANDO VENCE": "31/03/2026", "CANTIDAD": 1.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "28/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011659", "PRODUCTO": "Jugo 100% Mix 1 l Frutika", "CUANDO VENCE": "28/02/2026", "CANTIDAD": 2.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "28/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 2", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 57.0, "PDV_NORM": "CADENA REAL - ÑEMBY 2", "REP_NORM": "MARIA VERON"}, {"FECHA": "06/02/2026", "RELEVADOR": "TOBIAS BURGOS", "PUNTO DE VENTA": "SALEMMA - MULTIPLAZA", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "06/03/2026", "CANTIDAD": 12.0, "PDV_NORM": "SALEMMA - MULTIPLAZA", "REP_NORM": "TOBIAS BURGOS"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CUANDO VENCE": "17/02/2026", "CANTIDAD": 8.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 3.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 11.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 56.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 57.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "25/03/2026", "CANTIDAD": 108.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 8.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CUANDO VENCE": "10/02/2026", "CANTIDAD": 20.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/02/2026", "CANTIDAD": 36.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117004026", "PRODUCTO": "Nectar de Durazno Slim 200 ml Frutika", "CUANDO VENCE": "26/03/2026", "CANTIDAD": 28.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 4.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011574", "PRODUCTO": "Salsa Pizza Tetra 220 g Frutika", "CUANDO VENCE": "18/03/2026", "CANTIDAD": 20.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010119", "PRODUCTO": "Extracto de Tomate 140 g Frutika", "CUANDO VENCE": "11/03/2026", "CANTIDAD": 21.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CUANDO VENCE": "23/03/2026", "CANTIDAD": 180.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011567", "PRODUCTO": "Pure de Tomate Slim 220 g Frutika", "CUANDO VENCE": "08/02/2026", "CANTIDAD": 125.0, "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 23.0, "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "12/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CUANDO VENCE": "03/04/2026", "CANTIDAD": 15.0, "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "12/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117010829", "PRODUCTO": "Promo Pack 6x5 Nectar de Naranja 200 ml Frutika", "CUANDO VENCE": "19/03/2026", "CANTIDAD": 18.0, "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "19/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "SUPERMERCADO METRO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "15/03/2026", "CANTIDAD": 19.0, "PDV_NORM": "SUPERMERCADO METRO", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "19/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "SUPERMERCADO METRO", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CUANDO VENCE": "26/03/2026", "CANTIDAD": 11.0, "PDV_NORM": "SUPERMERCADO METRO", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "19/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "VILLA SOFIA - LUQUE", "TIENE PROD. A VENCER": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CUANDO VENCE": "13/03/2026", "CANTIDAD": 18.0, "PDV_NORM": "VILLA SOFIA - LUQUE", "REP_NORM": "HUGO GOMEZ"}];
+const RA = [{"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "EL AHORRAZO - CAPIATA R2", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salio su tapita", "PDV_NORM": "EL AHORRAZO - CAPIATA R2", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "21/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "ARETE - LAMBARE ", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011345", "PRODUCTO": "Ketchup Sin Picante 3 kg Perita", "CANTIDAD": 5.0, "MOTIVO": "Vencido fecha 17/01.", "PDV_NORM": "ARETE - LAMBARE", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "21/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "ARETE - LAMBARE ", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 4.0, "MOTIVO": "Se despegan las tapas.", "PDV_NORM": "ARETE - LAMBARE", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011703", "PRODUCTO": "Agua Mineral Sin Gas 2,25 l Génesis", "CANTIDAD": 1.0, "MOTIVO": "Sin etiqueta", "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117012007", "PRODUCTO": "Agua Funcional Fiber Green 500 ml Génesis", "CANTIDAD": 1.0, "MOTIVO": "Productos vencido", "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "ARETE - PINEDO ", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CANTIDAD": 1.0, "MOTIVO": "Sin etiqueta", "PDV_NORM": "ARETE - PINEDO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "20/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "GRAN VIA - ROYAL", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 2.0, "MOTIVO": "Roto el embalaje", "PDV_NORM": "GRAN VIA - ROYAL", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011178", "PRODUCTO": "Promo Pack x2 Nectar de Durazno 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Tapita despegada", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "02/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Tapita despegada", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "20/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117002022", "PRODUCTO": "Nectar de Manzana Slim 200 ml Frutika", "CANTIDAD": 3.0, "MOTIVO": "No tiene fecha de vencimiento", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "20/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117012229", "PRODUCTO": "Extracto de Tomate 220 g Frutika", "CANTIDAD": 3.0, "MOTIVO": "Sin fecha de vencimiento", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "20/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CANTIDAD": 1.0, "MOTIVO": "Tiene el pico roto", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "06/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011994", "PRODUCTO": "Agua Funcional Young 500 ml Génesis", "CANTIDAD": 1.0, "MOTIVO": "Averiado", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "06/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "SUPERMERCADO GUARANI", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117005016", "PRODUCTO": "Nectar de Guayaba 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Hinchado", "PDV_NORM": "SUPERMERCADO GUARANI", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "23/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "LOS JARDINES - VILLA ADELA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117012007", "PRODUCTO": "Agua Funcional Fiber Green 500 ml Génesis", "CANTIDAD": 1.0, "MOTIVO": "Entro vacío una botella entre las mercaderías", "PDV_NORM": "LOS JARDINES - VILLA ADELA", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "KINGO SUPERMERCADO -  MARIANO ROQUE ALONSO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CANTIDAD": 4.0, "MOTIVO": "Vencido del 9/01/26", "PDV_NORM": "KINGO SUPERMERCADO -  MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "12/03/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "LA BOMBA - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010119", "PRODUCTO": "Extracto de Tomate 140 g Frutika", "CANTIDAD": 3.0, "MOTIVO": "Rota", "PDV_NORM": "LA BOMBA - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "05/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CANTIDAD": 4.0, "MOTIVO": "Vencidos", "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011710", "PRODUCTO": "Agua Mineral Con Gas 500 ml Génesis", "CANTIDAD": 15.0, "MOTIVO": "Productos retirado por vencimiento", "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "LA BOMBA - SANTA TERESA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010454", "PRODUCTO": "Ketchup Sin Picante 400 g Frutika", "CANTIDAD": 4.0, "MOTIVO": "Productos retirado por vencimiento", "PDV_NORM": "LA BOMBA - SANTA TERESA", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "20/01/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "LOS JARDINES - FERNANDO DE LA MORA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Pico despegado", "PDV_NORM": "LOS JARDINES - FERNANDO DE LA MORA", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "06/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "LOS JARDINES - FERNANDO DE LA MORA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "HINCHADO", "PDV_NORM": "LOS JARDINES - FERNANDO DE LA MORA", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "06/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "LOS JARDINES - FERNANDO DE LA MORA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "tapita despegada", "PDV_NORM": "LOS JARDINES - FERNANDO DE LA MORA", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "06/02/2026", "RELEVADOR": "MARCO ZALAZAR", "PUNTO DE VENTA": "LOS JARDINES - FERNANDO DE LA MORA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011680", "PRODUCTO": "Agua Mineral Sin Gas 500 ml Génesis", "CANTIDAD": 1.0, "MOTIVO": "Averiado", "PDV_NORM": "LOS JARDINES - FERNANDO DE LA MORA", "REP_NORM": "MARCO ZALAZAR"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - CASA CENTRAL", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 2.0, "MOTIVO": "Salió la tapa", "PDV_NORM": "SUPERMERCADO LT - CASA CENTRAL", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - CASA CENTRAL", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010126", "PRODUCTO": "Extracto de Tomate 70 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Explotó en la caja", "PDV_NORM": "SUPERMERCADO LT - CASA CENTRAL", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117004033", "PRODUCTO": "Nectar Light de Durazno 1 l Frutika", "CANTIDAD": 7.0, "MOTIVO": "", "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "19/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - EXPRESS", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salió la tapa", "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - SAN JOSE", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CANTIDAD": 4.0, "MOTIVO": "Vencido 07-01-2026", "PDV_NORM": "SUPERMERCADO LT - SAN JOSE", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "SUPERMERCADO LT - SAN JOSE", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010942", "PRODUCTO": "Chimichurri Picante 400 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Vencido 22-01-2026", "PDV_NORM": "SUPERMERCADO LT - SAN JOSE", "REP_NORM": "YURIA VERA"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "La tapa no está bien pegado", "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "26/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - FELIX BOGADO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011345", "PRODUCTO": "Ketchup Sin Picante 3 kg Perita", "CANTIDAD": 1.0, "MOTIVO": "Se rompió en deposito", "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117001032", "PRODUCTO": "Nectar Light de Naranja 1 l Frutika", "CANTIDAD": 14.0, "MOTIVO": "Vencido 07-01-2026", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011932", "PRODUCTO": "Jugo 100% Naranja 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Vencido 08-01-2026", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salió la tapa", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011178", "PRODUCTO": "Promo Pack x2 Nectar de Durazno 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salió la tapa", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salió la tapa", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117005016", "PRODUCTO": "Nectar de Guayaba 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salió la tapa", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010379", "PRODUCTO": "Extracto de Tomate Tetra 70 g Perita", "CANTIDAD": 1.0, "MOTIVO": "Explotó en la caja", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010126", "PRODUCTO": "Extracto de Tomate 70 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Explotó en la caja", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010362", "PRODUCTO": "Extracto de Tomate Tetra 140 g Perita", "CANTIDAD": 1.0, "MOTIVO": "Explotó en la caja", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "15/01/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117001025", "PRODUCTO": "Nectar de Naranja Slim 200 ml Frutika", "CANTIDAD": 0.0, "MOTIVO": "", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117012007", "PRODUCTO": "Agua Funcional Fiber Green 500 ml Génesis", "CANTIDAD": 1.0, "MOTIVO": "Golpeado perdió su gas", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Salió su tapa", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "02/02/2026", "RELEVADOR": "YURIA VERA", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LIMPIO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010126", "PRODUCTO": "Extracto de Tomate 70 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Explotó en la. Caja", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "REP_NORM": "YURIA VERA"}, {"FECHA": "21/01/2026", "RELEVADOR": "HUGO GOMEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - LUQUE", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011574", "PRODUCTO": "Salsa Pizza Tetra 220 g Frutika", "CANTIDAD": 38.0, "MOTIVO": "No tiene lote ni fecha de vencimiento ingreso así 2 cajas", "PDV_NORM": "HIPERMERCADO LUISITO - LUQUE", "REP_NORM": "HUGO GOMEZ"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 3.0, "MOTIVO": "Tapa rota", "PDV_NORM": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CANTIDAD": 3.0, "MOTIVO": "Pico averiado", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010485", "PRODUCTO": "Aji Picante 150 ml Frutika", "CANTIDAD": 1.0, "MOTIVO": "Pierde la botellita", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CANTIDAD": 1.0, "MOTIVO": "Pierde agua", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "29/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117012229", "PRODUCTO": "Extracto de Tomate 220 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Dañado", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CANTIDAD": 1.0, "MOTIVO": "Pierde agua", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117005016", "PRODUCTO": "Nectar de Guayaba 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Tapa despegada", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CANTIDAD": 2.0, "MOTIVO": "Tapa dañada", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "03/02/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117012229", "PRODUCTO": "Extracto de Tomate 220 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Inflado", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011154", "PRODUCTO": "Promo Pack x2 Nectar de Naranja 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Averiado tapa", "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117005016", "PRODUCTO": "Nectar de Guayaba 1 l Frutika", "CANTIDAD": 3.0, "MOTIVO": "Golpeado", "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "11/03/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "HIPERMERCADO LUISITO - SAN LORENZO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Golpeado", "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "15/01/2026", "RELEVADOR": "ANA PIZURNO", "PUNTO DE VENTA": "PACIFICO - SAJONIA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117008031", "PRODUCTO": "Jugo 100% Multi 7 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "La tapa del producto no está bien pegado", "PDV_NORM": "PACIFICO - SAJONIA", "REP_NORM": "ANA PIZURNO"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011703", "PRODUCTO": "Agua Mineral Sin Gas 2,25 l Génesis", "CANTIDAD": 1.0, "MOTIVO": "Abollado", "PDV_NORM": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Tapa rota", "PDV_NORM": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "13/01/2026", "RELEVADOR": "EDITH DUARTE", "PUNTO DE VENTA": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011161", "PRODUCTO": "Promo Pack x2 Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Tapa rota", "PDV_NORM": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "REP_NORM": "EDITH DUARTE"}, {"FECHA": "01/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010126", "PRODUCTO": "Extracto de Tomate 70 g Frutika", "CANTIDAD": 4.0, "MOTIVO": "Dañado averiado", "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "CADENA REAL - ÑEMBY 1", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010119", "PRODUCTO": "Extracto de Tomate 140 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Mordió raton", "PDV_NORM": "CADENA REAL - ÑEMBY 1", "REP_NORM": "MARIA VERON"}, {"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "CADENA REAL - CAPIATA R2", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CANTIDAD": 3.0, "MOTIVO": "Salieron las tapas", "PDV_NORM": "CADENA REAL - CAPIATA R2", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "21/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "CADENA REAL - VILLAMORRA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CANTIDAD": 7.0, "MOTIVO": "Ingresaron rotas los picos", "PDV_NORM": "CADENA REAL - VILLAMORRA", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "21/01/2026", "RELEVADOR": "GLORIA MARTINEZ", "PUNTO DE VENTA": "CADENA REAL - VILLAMORRA", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 4.0, "MOTIVO": "Se despegan las tapas", "PDV_NORM": "CADENA REAL - VILLAMORRA", "REP_NORM": "GLORIA MARTINEZ"}, {"FECHA": "26/01/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "SALEMMA - SHOPPING SAN LORENZO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117004019", "PRODUCTO": "Nectar de Durazno 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Producto golpeado", "PDV_NORM": "SALEMMA - SHOPPING SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "SALEMMA - SHOPPING SAN LORENZO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117003012", "PRODUCTO": "Nectar de Pomelo 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "Averiado", "PDV_NORM": "SALEMMA - SHOPPING SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "09/02/2026", "RELEVADOR": "GRISELDA MARTINEZ", "PUNTO DE VENTA": "SALEMMA - SHOPPING SAN LORENZO", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010126", "PRODUCTO": "Extracto de Tomate 70 g Frutika", "CANTIDAD": 1.0, "MOTIVO": "Averiado", "PDV_NORM": "SALEMMA - SHOPPING SAN LORENZO", "REP_NORM": "GRISELDA MARTINEZ"}, {"FECHA": "04/02/2026", "RELEVADOR": "AURELIO CACERES", "PUNTO DE VENTA": "SUPERMERCADO SANTA RITA R2", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117010126", "PRODUCTO": "Extracto de Tomate 70 g Frutika", "CANTIDAD": 2.0, "MOTIVO": "Las cajitas podridos", "PDV_NORM": "SUPERMERCADO SANTA RITA R2", "REP_NORM": "AURELIO CACERES"}, {"FECHA": "05/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117002015", "PRODUCTO": "Nectar de Manzana 1 l Frutika", "CANTIDAD": 1.0, "MOTIVO": "", "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011345", "PRODUCTO": "Ketchup Sin Picante 3 kg Perita", "CANTIDAD": 1.0, "MOTIVO": "Se rompió", "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}, {"FECHA": "21/01/2026", "RELEVADOR": "MARIA VERON", "PUNTO DE VENTA": "SUPERMAS - ÑEMBY", "TIENE PROD. AVERIADOS": "SI", "CODIGO DE BARRA": "7840117011697", "PRODUCTO": "Agua Mineral Sin Gas 1 l Génesis", "CANTIDAD": 1.0, "MOTIVO": "Esta casi vacía", "PDV_NORM": "SUPERMAS - ÑEMBY", "REP_NORM": "MARIA VERON"}];
+const RR = [{"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "AHO AHO COMERCIAL", "PDV_NORM": "AHO AHO COMERCIAL", "CADENA": "Aho Aho Comercial"}, {"REPOSITOR": "GLORIA MARTINEZ", "REP_NORM": "GLORIA MARTINEZ", "PDV": "ARETE - LAMBARE", "PDV_NORM": "ARETE - LAMBARE", "CADENA": "Arete"}, {"REPOSITOR": "GRISELDA MARTINEZ", "REP_NORM": "GRISELDA MARTINEZ", "PDV": "ARETE - PINEDO", "PDV_NORM": "ARETE - PINEDO", "CADENA": "Arete"}, {"REPOSITOR": "FERNANDO BENITEZ", "REP_NORM": "FERNANDO BENITEZ", "PDV": "ARETE - PRIMER PRESIDENTE", "PDV_NORM": "ARETE - PRIMER PRESIDENTE", "CADENA": "Arete"}, {"REPOSITOR": "FERNANDO BENITEZ", "REP_NORM": "FERNANDO BENITEZ", "PDV": "ARETE - SAUSALITO", "PDV_NORM": "ARETE - SAUSALITO", "CADENA": "Arete"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "CADENA REAL - ACCESO SUR", "PDV_NORM": "CADENA REAL - ACCESO SUR", "CADENA": "Real"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "CADENA REAL - CAPIATA R1", "PDV_NORM": "CADENA REAL - CAPIATA R1", "CADENA": "Real"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "CADENA REAL - CAPIATA R2", "PDV_NORM": "CADENA REAL - CAPIATA R2", "CADENA": "Real"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "CADENA REAL - FELIX BOGADO", "PDV_NORM": "CADENA REAL - FELIX BOGADO", "CADENA": "Real"}, {"REPOSITOR": "TOBÍAS BURGOS", "REP_NORM": "TOBIAS BURGOS", "PDV": "CADENA REAL - FERNANDO DE LA MORA", "PDV_NORM": "CADENA REAL - FERNANDO DE LA MORA", "CADENA": "Real"}, {"REPOSITOR": "MARIA VERON", "REP_NORM": "MARIA VERON", "PDV": "CADENA REAL - ÑEMBY 1", "PDV_NORM": "CADENA REAL - ÑEMBY 1", "CADENA": "Real"}, {"REPOSITOR": "MARIA VERON", "REP_NORM": "MARIA VERON", "PDV": "CADENA REAL - ÑEMBY 2", "PDV_NORM": "CADENA REAL - ÑEMBY 2", "CADENA": "Real"}, {"REPOSITOR": "GLORIA MARTINEZ", "REP_NORM": "GLORIA MARTINEZ", "PDV": "CADENA REAL - SAN VICENTE", "PDV_NORM": "CADENA REAL - SAN VICENTE", "CADENA": "Real"}, {"REPOSITOR": "GLORIA MARTINEZ", "REP_NORM": "GLORIA MARTINEZ", "PDV": "CADENA REAL - VILLAMORRA", "PDV_NORM": "CADENA REAL - VILLAMORRA", "CADENA": "Real"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "CASA GRUTTER - ABASTO", "PDV_NORM": "CASA GRUTTER - ABASTO", "CADENA": "Casa Grutter"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "CASA GRUTTER - DEFENSORES", "PDV_NORM": "CASA GRUTTER - DEFENSORES", "CADENA": "Casa Grutter"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "CASA GRUTTER - SAPROCAL CASA FRESCA", "PDV_NORM": "CASA GRUTTER - SAPROCAL CASA FRESCA", "CADENA": "Casa Grutter"}, {"REPOSITOR": "FERNANDO BENITEZ", "REP_NORM": "FERNANDO BENITEZ", "PDV": "CASA RICA - ESPAÑA", "PDV_NORM": "CASA RICA - ESPAÑA", "CADENA": "Casa Rica"}, {"REPOSITOR": "TOBÍAS BURGOS", "REP_NORM": "TOBIAS BURGOS", "PDV": "CASA RICA - LOS LAURELES", "PDV_NORM": "CASA RICA - LOS LAURELES", "CADENA": "Casa Rica"}, {"REPOSITOR": "FERNANDO BENITEZ", "REP_NORM": "FERNANDO BENITEZ", "PDV": "CASA RICA - MOLAS", "PDV_NORM": "CASA RICA - MOLAS", "CADENA": "Casa Rica"}, {"REPOSITOR": "CINTHIA CRISTALDO", "REP_NORM": "CINTHIA CRISTALDO", "PDV": "ECOP BERGFELD", "PDV_NORM": "ECOP BERGFELD", "CADENA": "Ecop Bergfeld"}, {"REPOSITOR": "CINTHIA CRISTALDO", "REP_NORM": "CINTHIA CRISTALDO", "PDV": "ECOP BIOCEANICA", "PDV_NORM": "ECOP BIOCEANICA", "CADENA": "Ecop Bioceanica"}, {"REPOSITOR": "CINTHIA CRISTALDO", "REP_NORM": "CINTHIA CRISTALDO", "PDV": "ECOP LOMA PLATA", "PDV_NORM": "ECOP LOMA PLATA", "CADENA": "Ecop Loma Plata"}, {"REPOSITOR": "CINTHIA CRISTALDO", "REP_NORM": "CINTHIA CRISTALDO", "PDV": "ECOP PIONEROS", "PDV_NORM": "ECOP PIONEROS", "CADENA": "Ecop Pioneros"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "EL AHORRAZO - CAPIATA R1", "PDV_NORM": "EL AHORRAZO - CAPIATA R1", "CADENA": "El Ahorrazo"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "EL AHORRAZO - CAPIATA R2", "PDV_NORM": "EL AHORRAZO - CAPIATA R2", "CADENA": "El Ahorrazo"}, {"REPOSITOR": "GRISELDA MARTINEZ", "REP_NORM": "GRISELDA MARTINEZ", "PDV": "EL AHORRAZO - SAN LORENZO", "PDV_NORM": "EL AHORRAZO - SAN LORENZO", "CADENA": "El Ahorrazo"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "FORTIS - ABASTO", "PDV_NORM": "FORTIS - ABASTO", "CADENA": "Fortis"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "FORTIS - JOCKEY", "PDV_NORM": "FORTIS - JOCKEY", "CADENA": "Fortis"}, {"REPOSITOR": "GRISELDA MARTINEZ", "REP_NORM": "GRISELDA MARTINEZ", "PDV": "FORTIS - LAURELTY", "PDV_NORM": "FORTIS - LAURELTY", "CADENA": "Fortis"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "FORTIS - MARIANO ROQUE ALONSO", "PDV_NORM": "FORTIS - MARIANO ROQUE ALONSO", "CADENA": "Fortis"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "GRAN VIA - ASUNCION", "PDV_NORM": "GRAN VIA - ASUNCION", "CADENA": "Gran Via"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "GRAN VIA - LUQUE", "PDV_NORM": "GRAN VIA - LUQUE", "CADENA": "Gran Via"}, {"REPOSITOR": "MARIA VERON", "REP_NORM": "MARIA VERON", "PDV": "GRAN VIA - ÑEMBY", "PDV_NORM": "GRAN VIA - ÑEMBY", "CADENA": "Gran Via"}, {"REPOSITOR": "MARCO ZALAZAR", "REP_NORM": "MARCO ZALAZAR", "PDV": "GRAN VIA - ROYAL", "PDV_NORM": "GRAN VIA - ROYAL", "CADENA": "Gran Via"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "HIPERMERCADO LUISITO - 4 MOJONES", "PDV_NORM": "HIPERMERCADO LUISITO - 4 MOJONES", "CADENA": "Luisito"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "HIPERMERCADO LUISITO - EUSEBIO AYALA", "PDV_NORM": "HIPERMERCADO LUISITO - EUSEBIO AYALA", "CADENA": "Luisito"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "HIPERMERCADO LUISITO - FELIX BOGADO", "PDV_NORM": "HIPERMERCADO LUISITO - FELIX BOGADO", "CADENA": "Luisito"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "HIPERMERCADO LUISITO - ITAUGUA", "PDV_NORM": "HIPERMERCADO LUISITO - ITAUGUA", "CADENA": "Luisito"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "HIPERMERCADO LUISITO - LIMPIO", "PDV_NORM": "HIPERMERCADO LUISITO - LIMPIO", "CADENA": "Luisito"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "HIPERMERCADO LUISITO - LUQUE", "PDV_NORM": "HIPERMERCADO LUISITO - LUQUE", "CADENA": "Luisito"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "PDV_NORM": "HIPERMERCADO LUISITO - MARIANO ROQUE ALONSO", "CADENA": "Luisito"}, {"REPOSITOR": "MARIA VERON", "REP_NORM": "MARIA VERON", "PDV": "HIPERMERCADO LUISITO - ÑEMBY", "PDV_NORM": "HIPERMERCADO LUISITO - ÑEMBY", "CADENA": "Luisito"}, {"REPOSITOR": "GRISELDA MARTINEZ", "REP_NORM": "GRISELDA MARTINEZ", "PDV": "HIPERMERCADO LUISITO - SAN LORENZO", "PDV_NORM": "HIPERMERCADO LUISITO - SAN LORENZO", "CADENA": "Luisito"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "HIPERMERCADO LUISITO - VILLA ELISA", "PDV_NORM": "HIPERMERCADO LUISITO - VILLA ELISA", "CADENA": "Luisito"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "HIPERMERCADO LUISITO - YPANE", "PDV_NORM": "HIPERMERCADO LUISITO - YPANE", "CADENA": "Luisito"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "HIPERMERCADO PUEBLO - ARTIGAS", "PDV_NORM": "HIPERMERCADO PUEBLO - ARTIGAS", "CADENA": "Pueblo"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "PDV_NORM": "HIPERMERCADO PUEBLO - MARIANO ROQUE ALONSO", "CADENA": "Pueblo"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "HIPERMERCADO PUEBLO - PASEO DEL SUR", "PDV_NORM": "HIPERMERCADO PUEBLO - PASEO DEL SUR", "CADENA": "Pueblo"}, {"REPOSITOR": "TOBÍAS BURGOS", "REP_NORM": "TOBIAS BURGOS", "PDV": "HIPERMERCADOS PUEBLO - FERNANDO DE LA MORA", "PDV_NORM": "HIPERMERCADOS PUEBLO - FERNANDO DE LA MORA", "CADENA": "S Pueblo"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "HUPERMERCADO LUISITO - CAPIATA R1", "PDV_NORM": "HUPERMERCADO LUISITO - CAPIATA R1", "CADENA": "Luisito"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "HUPERMERCADO PUEBLO - SAN VICENTE", "PDV_NORM": "HUPERMERCADO PUEBLO - SAN VICENTE", "CADENA": "Pueblo"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "KINGO SUPERMERCADO -  MARIANO ROQUE ALONSO", "PDV_NORM": "KINGO SUPERMERCADO -  MARIANO ROQUE ALONSO", "CADENA": "Kingo Supermercado"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "PDV_NORM": "KINGO SUPERMERCADO - AVELINO MARTINEZ", "CADENA": "Kingo Supermercado"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "LA BOMBA - AREGUA", "PDV_NORM": "LA BOMBA - AREGUA", "CADENA": "La Bomba"}, {"REPOSITOR": "MARIA VERON", "REP_NORM": "MARIA VERON", "PDV": "LA BOMBA - ÑEMBY", "PDV_NORM": "LA BOMBA - ÑEMBY", "CADENA": "La Bomba"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "LA BOMBA - PROCERES", "PDV_NORM": "LA BOMBA - PROCERES", "CADENA": "La Bomba"}, {"REPOSITOR": "GRISELDA MARTINEZ", "REP_NORM": "GRISELDA MARTINEZ", "PDV": "LA BOMBA - SANTA TERESA", "PDV_NORM": "LA BOMBA - SANTA TERESA", "CADENA": "La Bomba"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "LA BOMBA - TERMINAL", "PDV_NORM": "LA BOMBA - TERMINAL", "CADENA": "La Bomba"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "LA BOMBA - VIA FERREA", "PDV_NORM": "LA BOMBA - VIA FERREA", "CADENA": "La Bomba"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "LO JARDINES - MORA CUE", "PDV_NORM": "LO JARDINES - MORA CUE", "CADENA": "Lo Jardines"}, {"REPOSITOR": "MARCO ZALAZAR", "REP_NORM": "MARCO ZALAZAR", "PDV": "LOS JARDINES - FERNANDO DE LA MORA", "PDV_NORM": "LOS JARDINES - FERNANDO DE LA MORA", "CADENA": "Los Jardines"}, {"REPOSITOR": "MARCO ZALAZAR", "REP_NORM": "MARCO ZALAZAR", "PDV": "LOS JARDINES - LEOPARDI", "PDV_NORM": "LOS JARDINES - LEOPARDI", "CADENA": "Los Jardines"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "LOS JARDINES - GRAL AQUINO", "PDV_NORM": "LOS JARDINES - GRAL AQUINO", "CADENA": "Los Jardines"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "LOS JARDINES - PRIMAVERA", "PDV_NORM": "LOS JARDINES - PRIMAVERA", "CADENA": "Los Jardines"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "LOS JARDINES - VILLA ADELA", "PDV_NORM": "LOS JARDINES - VILLA ADELA", "CADENA": "Los Jardines"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "ÑA NICA", "PDV_NORM": "ÑA NICA", "CADENA": "Ña Nica"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "PACIFICO - SAJONIA", "PDV_NORM": "PACIFICO - SAJONIA", "CADENA": "Pacifico"}, {"REPOSITOR": "EDITH DUARTE", "REP_NORM": "EDITH DUARTE", "PDV": "PUEBLAZO - LIMPIO", "PDV_NORM": "PUEBLAZO - LIMPIO", "CADENA": "Pueblazo"}, {"REPOSITOR": "FERNANDO BENITEZ", "REP_NORM": "FERNANDO BENITEZ", "PDV": "SALEMMA - CARMELITAS", "PDV_NORM": "SALEMMA - CARMELITAS", "CADENA": "Salemma"}, {"REPOSITOR": "TOBÍAS BURGOS", "REP_NORM": "TOBIAS BURGOS", "PDV": "SALEMMA - MULTIPLAZA", "PDV_NORM": "SALEMMA - MULTIPLAZA", "CADENA": "Salemma"}, {"REPOSITOR": "GRISELDA MARTINEZ", "REP_NORM": "GRISELDA MARTINEZ", "PDV": "SALEMMA - SHOPPING SAN LORENZO", "PDV_NORM": "SALEMMA - SHOPPING SAN LORENZO", "CADENA": "Salemma"}, {"REPOSITOR": "TOBÍAS BURGOS", "REP_NORM": "TOBIAS BURGOS", "PDV": "SALEMMA - SUPER CENTER", "PDV_NORM": "SALEMMA - SUPER CENTER", "CADENA": "Salemma"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "SUPERMAS - ABASTO", "PDV_NORM": "SUPERMAS - ABASTO", "CADENA": "Supermas"}, {"REPOSITOR": "MARIA VERON", "REP_NORM": "MARIA VERON", "PDV": "SUPERMAS - ÑEMBY", "PDV_NORM": "SUPERMAS - ÑEMBY", "CADENA": "Supermas"}, {"REPOSITOR": "CINTHIA CRISTALDO", "REP_NORM": "CINTHIA CRISTALDO", "PDV": "SUPERMERCADO CHORTITZER", "PDV_NORM": "SUPERMERCADO CHORTITZER", "CADENA": "Chortitzer"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "SUPERMERCADO COLON - GUARAMBARE", "PDV_NORM": "SUPERMERCADO COLON - GUARAMBARE", "CADENA": "Colon"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "SUPERMERCADO DIEFER - ACCESO", "PDV_NORM": "SUPERMERCADO DIEFER - ACCESO", "CADENA": "Diefer"}, {"REPOSITOR": "GLORIA MARTINEZ", "REP_NORM": "GLORIA MARTINEZ", "PDV": "SUPERMERCADO EL PUEBLO - LAMBARE", "PDV_NORM": "SUPERMERCADO EL PUEBLO - LAMBARE", "CADENA": "El Pueblo"}, {"REPOSITOR": "MARCO ZALAZAR", "REP_NORM": "MARCO ZALAZAR", "PDV": "SUPERMERCADO GUARANI", "PDV_NORM": "SUPERMERCADO GUARANI", "CADENA": "Guarani"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - CASA CENTRAL", "PDV_NORM": "SUPERMERCADO LT - CASA CENTRAL", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - COSTA BENJAMIN", "PDV_NORM": "SUPERMERCADO LT - COSTA BENJAMIN", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - EMBOSCADA", "PDV_NORM": "SUPERMERCADO LT - EMBOSCADA", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - EXPRESS", "PDV_NORM": "SUPERMERCADO LT - EXPRESS", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - MBAYUE", "PDV_NORM": "SUPERMERCADO LT - MBAYUE", "CADENA": "Lt"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "SUPERMERCADO LT - MORA CUE LUQUE", "PDV_NORM": "SUPERMERCADO LT - MORA CUE LUQUE", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - RINCON", "PDV_NORM": "SUPERMERCADO LT - RINCON", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - SAN JOSE", "PDV_NORM": "SUPERMERCADO LT - SAN JOSE", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - VILLA HAYES", "PDV_NORM": "SUPERMERCADO LT - VILLA HAYES", "CADENA": "Lt"}, {"REPOSITOR": "YURIA VERA", "REP_NORM": "YURIA VERA", "PDV": "SUPERMERCADO LT - VILLA MADRID", "PDV_NORM": "SUPERMERCADO LT - VILLA MADRID", "CADENA": "Lt"}, {"REPOSITOR": "JOEL ORTIZ", "REP_NORM": "JOEL ORTIZ", "PDV": "SUPERMERCADO MARANGATU", "PDV_NORM": "SUPERMERCADO MARANGATU", "CADENA": "Marangatu"}, {"REPOSITOR": "GLORIA MARTINEZ", "REP_NORM": "GLORIA MARTINEZ", "PDV": "SUPERMERCADO METRO", "PDV_NORM": "SUPERMERCADO METRO", "CADENA": "Metro"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "SUPERMERCADO MOREL HNOS", "PDV_NORM": "SUPERMERCADO MOREL HNOS", "CADENA": "Morel Hnos"}, {"REPOSITOR": "MARCO ZALAZAR", "REP_NORM": "MARCO ZALAZAR", "PDV": "SUPERMERCADO PRYCA - EXPRESS", "PDV_NORM": "SUPERMERCADO PRYCA - EXPRESS", "CADENA": "Pryca"}, {"REPOSITOR": "MICAELA  PAREDES", "REP_NORM": "MICAELA PAREDES", "PDV": "SUPERMERCADO PRYCA - TERMINAL", "PDV_NORM": "SUPERMERCADO PRYCA - TERMINAL", "CADENA": "Pryca"}, {"REPOSITOR": "YENNIFER ADORNO", "REP_NORM": "YENNIFER ADORNO", "PDV": "SUPERMERCADO SANTA RITA R1", "PDV_NORM": "SUPERMERCADO SANTA RITA R1", "CADENA": "Santa Rita R1"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "SUPERMERCADO SANTA RITA R2", "PDV_NORM": "SUPERMERCADO SANTA RITA R2", "CADENA": "Santa Rita R2"}, {"REPOSITOR": "AURELIO CÁCERES", "REP_NORM": "AURELIO CACERES", "PDV": "SUPERMERCADOS EDWARD - CAPIATA", "PDV_NORM": "SUPERMERCADOS EDWARD - CAPIATA", "CADENA": "Edward"}, {"REPOSITOR": "HUGO GÓMEZ", "REP_NORM": "HUGO GOMEZ", "PDV": "VILLA SOFIA - LUQUE", "PDV_NORM": "VILLA SOFIA - LUQUE", "CADENA": "Villa Sofia"}, {"REPOSITOR": "ANA PIZURNO", "REP_NORM": "ANA PIZURNO", "PDV": "VILLA SOFIA - SAJONIA", "PDV_NORM": "VILLA SOFIA - SAJONIA", "CADENA": "Villa Sofia"}];
+
+// ═══════════════════════════════════
+// UTILS
+// ═══════════════════════════════════
+const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function parseDate(s){if(!s||s.trim()==='')return null;const p=s.split('/');if(p.length===3)return new Date(+p[2],+p[1]-1,+p[0]);return null;}
+function fmtDate(d){if(!d)return'—';return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}
+function fmtN(n){return Math.round(n).toLocaleString('es-PY');}
+function normStr(s){return String(s).toUpperCase().trim().replace(/\s*-\s*/g,' ').replace(/\s+/g,' ').replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U').replace(/Ñ/g,'N');}
+function normRep(s){return normStr(s.replace(/^\d+\.\s*/,''));}
+function getCorte(){const v=document.getElementById('fechaCorte').value;return v?new Date(v+'T23:59:59'):new Date();}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function diffDays(a,b){return Math.round((b-a)/(1000*60*60*24));}
+function qKey(d){const q=d.getDate()<=15?1:2;return{q,m:d.getMonth(),y:d.getFullYear(),lbl:`Q${q} ${months[d.getMonth()]} ${d.getFullYear()}`,sort:`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${q}`};}
+function aggBy(data,key){const m={};data.forEach(r=>{const k=r[key]||'(sin dato)';m[k]=(m[k]||0)+(r.CANTIDAD||0);});return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+
+// ═══════════════════════════════════
+// THEME
+// ═══════════════════════════════════
+let isDark=true;
+function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!isDark);document.getElementById('thlbl').textContent=isDark?'🌙 Nocturno':'☀️ Día';renderAll();}
+
+// ═══════════════════════════════════
+// FILTER STATE
+// ═══════════════════════════════════
+let filterFrom=null,filterTo=null;
+
+function getFilter(){
+  const corte=getCorte();
+  const from=filterFrom?new Date(filterFrom):null;
+  const to=filterTo?new Date(filterTo+'T23:59:59'):corte;
+  return{from,to:to>corte?corte:to};
+}
+function filterData(raw){
+  const corte=getCorte();
+  // If specific quincenas selected, use per-record range check
+  if(selectedQ&&selectedQ.length){
+    return raw.filter(r=>{
+      const d=parseDate(r.FECHA);if(!d)return false;
+      if(d>corte)return false;
+      // check if date falls in any selected quincena
+      return selectedQ.some(s=>{
+        const q=ALL_Q.find(x=>x.sort===s);if(!q)return false;
+        const qFrom=new Date(q.from);
+        const qTo=new Date(q.to+'T23:59:59');
+        return d>=qFrom&&d<=qTo;
+      });
+    });
+  }
+  const{from,to}=getFilter();
+  return raw.filter(r=>{
+    const d=parseDate(r.FECHA);if(!d)return false;
+    if(from&&d<from)return false;
+    if(to&&d>to)return false;
+    return true;
+  });
+}
+
+// ═══════════════════════════════════
+// QUINCENA SELECTOR (multi-select)
+// ═══════════════════════════════════
+let ALL_Q=[];       // [{lbl,from,to,sort,monthKey,monthLbl}]
+let selectedQ=[];   // array of sort keys currently active
+
+function buildQuincenas(){
+  const all=[...RV,...RA];
+  const qm={};
+  all.forEach(r=>{
+    const d=parseDate(r.FECHA);if(!d)return;
+    const{q,m,y,lbl,sort}=qKey(d);
+    const mo=m+1;
+    const from=`${y}-${String(mo).padStart(2,'0')}-${q===1?'01':'16'}`;
+    const lastDay=q===1?15:new Date(y,mo,0).getDate();
+    const to=`${y}-${String(mo).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+    const monthKey=`${y}-${String(mo).padStart(2,'0')}`;
+    const monthLbl=`${months[m]} ${y}`;
+    if(!qm[sort])qm[sort]={lbl,from,to,sort,monthKey,monthLbl};
+  });
+  ALL_Q=Object.values(qm).sort((a,b)=>a.sort.localeCompare(b.sort));
+  const sel=document.getElementById('q-select');
+  // Group by month
+  const byMonth={};
+  ALL_Q.forEach(q=>{if(!byMonth[q.monthKey])byMonth[q.monthKey]={lbl:q.monthLbl,qs:[]};byMonth[q.monthKey].qs.push(q);});
+  sel.innerHTML='<option value="">+ Agregar quincena…</option>';
+  Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([mk,{lbl,qs}])=>{
+    const grp=document.createElement('optgroup');
+    grp.label=lbl;
+    qs.forEach(q=>{
+      const opt=document.createElement('option');
+      opt.value=q.sort;
+      opt.textContent=q.lbl;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+}
+
+function addQuincena(sel){
+  const sort=sel.value;
+  if(!sort){return;}
+  sel.value='';
+  if(selectedQ.includes(sort))return;
+  selectedQ.push(sort);
+  renderTags();
+  applyFilter();
+}
+
+function addMonth(){
+  // find the month of the last selected, or prompt from select
+  const sel=document.getElementById('q-select');
+  // find current optgroup labels to pick — add all Q of next unselected month
+  const usedMonths=new Set(selectedQ.map(s=>{const q=ALL_Q.find(x=>x.sort===s);return q?q.monthKey:null;}).filter(Boolean));
+  const nextMonth=ALL_Q.find(q=>!usedMonths.has(q.monthKey));
+  if(!nextMonth)return;
+  const monthQ=ALL_Q.filter(q=>q.monthKey===nextMonth.monthKey);
+  monthQ.forEach(q=>{if(!selectedQ.includes(q.sort))selectedQ.push(q.sort);});
+  renderTags();
+  applyFilter();
+}
+
+function removeQ(sort){
+  selectedQ=selectedQ.filter(s=>s!==sort);
+  renderTags();
+  applyFilter();
+}
+
+function renderTags(){
+  const container=document.getElementById('q-tags');
+  if(!selectedQ.length){container.innerHTML='<span style="font-size:11px;color:var(--muted);font-style:italic">Mostrando todo el período</span>';return;}
+  const grouped=[];
+  const byMonth={};
+  selectedQ.forEach(s=>{const q=ALL_Q.find(x=>x.sort===s);if(!q)return;if(!byMonth[q.monthKey])byMonth[q.monthKey]=[];byMonth[q.monthKey].push(q);});
+  Object.entries(byMonth).forEach(([mk,qs])=>{
+    const allInMonth=ALL_Q.filter(q=>q.monthKey===mk);
+    const isFullMonth=allInMonth.every(q=>selectedQ.includes(q.sort));
+    if(isFullMonth&&allInMonth.length===2){
+      grouped.push({type:'month',lbl:qs[0].monthLbl,sorts:qs.map(q=>q.sort)});
+    } else {
+      qs.forEach(q=>grouped.push({type:'q',lbl:q.lbl,sorts:[q.sort]}));
+    }
+  });
+  // Store groups globally so click handler can access them by index
+  window._qtags=grouped;
+  container.innerHTML=grouped.map((g,i)=>`
+    <div class="q-tag ${g.type==='month'?'month-tag':''}">
+      ${g.lbl}
+      <span class="x" data-idx="${i}" onclick="removeQByIdx(this)">×</span>
+    </div>`).join('');
+}
+
+function removeQByIdx(el){
+  const i=parseInt(el.getAttribute('data-idx'));
+  const g=window._qtags[i];
+  if(!g)return;
+  g.sorts.forEach(s=>{selectedQ=selectedQ.filter(x=>x!==s);});
+  renderTags();
+  applyFilter();
+}
+
+function removeQs(sorts){
+  sorts.forEach(s=>{selectedQ=selectedQ.filter(x=>x!==s);});
+  renderTags();
+  applyFilter();
+}
+
+function setTodo(){
+  selectedQ=[];
+  renderTags();
+  filterFrom=null;filterTo=null;
+  renderAll();
+}
+
+function applyFilter(){
+  if(!selectedQ.length){filterFrom=null;filterTo=null;renderAll();return;}
+  // Union of all selected date ranges
+  const qs=selectedQ.map(s=>ALL_Q.find(q=>q.sort===s)).filter(Boolean);
+  const froms=qs.map(q=>q.from).sort();
+  const tos=qs.map(q=>q.to).sort();
+  filterFrom=froms[0];
+  filterTo=tos[tos.length-1];
+  // Store selected sorts for multi-range filtering
+  window._selectedSorts=new Set(selectedQ);
+  renderAll();
+}
+
+// ═══════════════════════════════════
+// TABS
+// ═══════════════════════════════════
+let currentTab=0;
+const tabClasses=['at','at','at-b','at-r','at-y'];
+function switchTab(i,el){
+  document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('at','at-r','at-b','at-y');});
+  el.classList.add(tabClasses[i]);
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s'+i).classList.add('on');
+  currentTab=i;
+  setTimeout(()=>renderAll(),40);
+}
+
+// ═══════════════════════════════════
+// CUMPLIMIENTO LOGIC
+// ═══════════════════════════════════
+function calcCumplimiento(vData){
+  const corte=getCorte();
+  // PDVs that reported in the period (filtered vencer data)
+  const reportedPDVs=new Set(vData.map(r=>normStr(r['PUNTO DE VENTA'])));
+
+  const byRep={};
+  RR.forEach(row=>{
+    const rep=normStr(row.REPOSITOR);
+    if(!byRep[rep])byRep[rep]={name:row.REPOSITOR.trim(),asignados:[],cargados:0};
+    const pdvNorm=normStr(row.PDV);
+    byRep[rep].asignados.push({pdv:row.PDV,norm:pdvNorm});
+    if(reportedPDVs.has(pdvNorm))byRep[rep].cargados++;
+  });
+
+  return Object.values(byRep).map(r=>({
+    ...r,
+    total:r.asignados.length,
+    pendientes:r.asignados.length-r.cargados,
+    pct:r.asignados.length?Math.round(r.cargados/r.asignados.length*100):0
+  })).sort((a,b)=>b.pct-a.pct||b.cargados-a.cargados);
+}
+
+// ═══════════════════════════════════
+// ALERTS (vencimientos críticos)
+// ═══════════════════════════════════
+function calcAlerts(vData){
+  const corte=getCorte();
+  const critical=[];
+  vData.forEach(r=>{
+    const vence=parseDate(r['CUANDO VENCE']);
+    if(!vence)return;
+    const days=diffDays(corte,vence);
+    if(days<=30&&days>=0){
+      critical.push({...r,vence,days});
+    }
+  });
+  return critical.sort((a,b)=>a.days-b.days);
+}
+
+// ═══════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════
+function el(id){return document.getElementById(id);}
+
+function renderKPIs(containerId, kpis){
+  el(containerId).innerHTML=kpis.map(k=>`
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:${k.color}"></div>
+      <div class="kpi-lbl">${k.lbl}</div>
+      <div class="kpi-val" style="color:${k.valColor||'var(--text)'}">${k.val}</div>
+      ${k.pct!==undefined?`<div class="kpi-pct" style="color:${k.pctColor||'var(--muted)'}">${k.pct}</div>`:''}
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderBars(id,entries,color,top=10,key=''){
+  const container=el(id);
+  if(!entries.length){container.innerHTML='<div class="empty">Sin datos</div>';return;}
+  const topN=entries.slice(0,top);
+  const max=topN[0][1];
+  container.innerHTML=topN.map(([name,val],i)=>`
+    <div class="brow">
+      <div class="brank ${key==='r'?'top-r':i===0?'top':''}">${i+1}</div>
+      <div class="blbl" title="${name}">${name}</div>
+      <div class="btrack"><div class="bfill" style="width:${(val/max*100).toFixed(1)}%;background:${color}"></div></div>
+      <div class="bval">${fmtN(val)}</div>
+    </div>`).join('');
+}
+
+function renderStackedBars(id, cumplData){
+  const c=el(id);
+  if(!cumplData.length){c.innerHTML='<div class="empty">Sin datos</div>';return;}
+  const max=Math.max(...cumplData.map(r=>r.total));
+  c.innerHTML=cumplData.map(r=>{
+    const cPct=r.total?r.cargados/r.total*100:0;
+    const pPct=r.total?r.pendientes/r.total*100:0;
+    const color=r.pct>=80?'var(--g)':r.pct>=50?'var(--y)':'var(--r)';
+    return`<div class="srow">
+      <div class="sname" title="${r.name}">${r.name}</div>
+      <div class="strack">
+        <div class="sfill-c" style="width:${cPct.toFixed(1)}%;background:${color}"></div>
+        <div class="sfill-p" style="width:${pPct.toFixed(1)}%"></div>
+      </div>
+      <div class="spct" style="color:${color}">${r.pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTimeline(id,data){
+  const c=el(id);if(!c)return;
+  const m={};
+  data.forEach(r=>{
+    const d=parseDate(r.FECHA);if(!d)return;
+    const{lbl,sort}=qKey(d);
+    if(!m[sort])m[sort]={lbl,val:0};
+    m[sort].val+=(r.CANTIDAD||0);
+  });
+  const entries=Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(!entries.length){c.innerHTML='<div class="empty">Sin datos</div>';return;}
+  const maxV=Math.max(...entries.map(e=>e[1].val));
+  const color=id.includes('a')||id.includes('aver')||id.includes('resumen')?'var(--g)':'var(--g)';
+  c.innerHTML=entries.map(([,{lbl,val}])=>{
+    const barH=Math.max(4,Math.round(val/maxV*88));
+    return`<div class="act-col">
+      <div class="act-bar" style="height:${barH}px;background:${color};opacity:.8" title="${lbl}: ${fmtN(val)}"></div>
+      <div class="act-lbl">${lbl}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAlerts(id,alerts){
+  const c=el(id);if(!c)return;
+  if(!alerts.length){c.innerHTML='<div class="empty">✅ Sin alertas críticas en este período</div>';return;}
+  c.innerHTML=`<div class="alert-grid">${alerts.slice(0,5).map(r=>{
+    const cls=r.days<=7?'bc-r':r.days<=15?'bc-y':'bc-g';
+    const stripe=r.days<=7?'var(--r)':r.days<=15?'var(--y)':'var(--g)';
+    return`<div class="alert-card">
+      <div class="alert-stripe" style="background:${stripe}"></div>
+      <div class="alert-body">
+        <div class="alert-prod">${r.PRODUCTO}</div>
+        <div class="alert-pdv">${r['PUNTO DE VENTA']}</div>
+        <div class="alert-meta">
+          <div class="alert-meta-item"><label>STOCK</label><div class="v">${fmtN(r.CANTIDAD)} u.</div></div>
+          <div class="alert-meta-item"><label>VENCE</label><div class="v" style="font-size:13px">${fmtDate(r.vence)}</div></div>
+          <div class="alert-meta-item"><label>DÍAS</label><div class="v" style="font-size:13px">${r.days}d</div></div>
+          <div class="alert-meta-item" style="margin-left:auto;align-self:flex-end"><span class="badge-crit ${cls}">CRÍTICO</span></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderCadena(id){
+  const c=el(id);if(!c)return;
+  const m={};
+  RR.forEach(r=>{const k=r.CADENA||'Otros';m[k]=(m[k]||0)+1;});
+  const sorted=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  c.innerHTML=`<div class="cadena-grid">${sorted.map(([name,count])=>`
+    <div class="cadena-card">
+      <div class="cadena-name">${name}</div>
+      <div class="cadena-count">${count}</div>
+      <div class="cadena-sub">locales</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderCadenaBars(id){
+  const c=el(id);if(!c)return;
+  const m={};
+  RR.forEach(r=>{const k=r.CADENA||'Otros';m[k]=(m[k]||0)+1;});
+  const sorted=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  renderBars(id,sorted,'var(--b)',10);
+}
+
+function renderBrechaTable(cumplData){
+  const t=el('tbl-brecha');
+  t.innerHTML=cumplData.map(r=>{
+    const color=r.pct>=80?'var(--g)':r.pct>=50?'var(--y)':'var(--r)';
+    const star=r.pct>0?'★ ':'';
+    return`<tr>
+      <td><strong>${star}${r.name}</strong></td>
+      <td class="mono">${r.total}</td>
+      <td class="mono" style="color:var(--g)">${r.cargados}</td>
+      <td class="mono" style="color:var(--r)">${r.pendientes}</td>
+      <td class="mono" style="color:${color};font-weight:700">${r.pct}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderVTable(data){
+  const t=el('tbl-v');
+  el('cnt-v').textContent=`${fmtN(data.length)} registros`;
+  if(!data.length){t.innerHTML='<tr><td colspan="7" class="empty">Sin datos</td></tr>';return;}
+  t.innerHTML=data.slice(0,200).map(r=>`<tr>
+    <td class="mono">${r.FECHA}</td>
+    <td>${r.RELEVADOR.replace(/^\d+\.\s*/,'')}</td>
+    <td>${r['PUNTO DE VENTA']}</td>
+    <td class="mono" style="color:var(--muted);font-size:10px">${r['CODIGO DE BARRA']}</td>
+    <td>${r.PRODUCTO}</td>
+    <td class="mono">${r['CUANDO VENCE']||'—'}</td>
+    <td class="mono" style="color:var(--g);font-weight:600">${r.CANTIDAD||'—'}</td>
+  </tr>`).join('');
+}
+
+function renderATable(data){
+  const t=el('tbl-a');
+  el('cnt-a').textContent=`${fmtN(data.length)} registros`;
+  if(!data.length){t.innerHTML='<tr><td colspan="7" class="empty">Sin datos</td></tr>';return;}
+  t.innerHTML=data.slice(0,200).map(r=>`<tr>
+    <td class="mono">${r.FECHA}</td>
+    <td>${r.RELEVADOR.replace(/^\d+\.\s*/,'')}</td>
+    <td>${r['PUNTO DE VENTA']}</td>
+    <td class="mono" style="color:var(--muted);font-size:10px">${r['CODIGO DE BARRA']}</td>
+    <td>${r.PRODUCTO}</td>
+    <td class="mono" style="color:var(--r);font-weight:600">${r.CANTIDAD||'—'}</td>
+    <td style="font-size:11px;color:var(--muted)">${r.MOTIVO||'—'}</td>
+  </tr>`).join('');
+}
+
+function renderRecomendaciones(vData,aData,cumpl){
+  const corte=getCorte();
+  const alerts=calcAlerts(vData);
+  const totalAsig=RR.length;
+  const totalCarg=cumpl.reduce((s,r)=>s+r.cargados,0);
+  const cumplPct=totalAsig?Math.round(totalCarg/totalAsig*100):0;
+  const cero=cumpl.filter(r=>r.pct===0);
+  const best=cumpl.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct)[0];
+  const topAver=aData.length?aggBy(aData,'PUNTO DE VENTA')[0]:null;
+  const totalAverU=Math.round(aData.reduce((s,r)=>s+(r.CANTIDAD||0),0));
+
+  const recs=[
+    {
+      n:'01',
+      title:'Revisión Urgente de Repositores',
+      text:cero.length>0
+        ?`${cero.length} repositor${cero.length>1?'es tienen':'tiene'} 0% de cumplimiento. Convocar reunión en 48 hs e identificar causas raíz del ${100-cumplPct}% de incumplimiento.`
+        :'Todos los repositores tienen al menos un reporte cargado. Mantener el ritmo y apuntar a cobertura completa.'
+    },
+    {
+      n:'02',
+      title:'Gestión de Vencimientos — Acción Inmediata',
+      text:alerts.length>0
+        ?`${alerts.length} alerta${alerts.length>1?'s críticas':'  crítica'} activa${alerts.length>1?'s':''} con ${fmtN(alerts.reduce((s,r)=>s+(r.CANTIDAD||0),0))} unidades. Coordinar retiro o activación urgente con los puntos de venta afectados.`
+        :'Sin vencimientos críticos en los próximos 30 días. Monitorear productos del siguiente mes.'
+    },
+    {
+      n:'03',
+      title:'Control de Productos Averiados',
+      text:aData.length>0
+        ?`${fmtN(totalAverU)} unidades averiadas detectadas.${topAver?` ${topAver[0]} concentra el mayor volumen (${fmtN(topAver[1])} u). Requiere atención prioritaria.`:''}`
+        :'Sin productos averiados reportados en el período. Mantener el control de calidad en campo.'
+    },
+    {
+      n:'04',
+      title:'Reconocimiento y Benchmarking Interno',
+      text:best
+        ?`${best.name} lidera con ${best.pct}% de cumplimiento (${best.cargados}/${best.total} locales). Tomar como referencia para replicar buenas prácticas en el equipo.`
+        :'Sin repositores con carga registrada en el período seleccionado.'
+    }
+  ];
+
+  el('rec-grid').innerHTML=recs.map(r=>`
+    <div class="rec-card">
+      <div class="rec-num">${r.n}</div>
+      <div class="rec-title">${r.title}</div>
+      <div class="rec-text">${r.text}</div>
+    </div>`).join('');
+
+  el('proximos-pasos').innerHTML=`
+    <ol style="padding-left:18px;font-size:13px;color:var(--muted);line-height:2">
+      <li>Reunión de equipo de campo — <strong style="color:var(--text)">48 hs</strong></li>
+      <li>${alerts.length>0?'Retiro o activación de productos próximos a vencer':'Monitorear productos del próximo mes'}</li>
+      <li>Implementar sistema de carga ${corte.getDate()<=15?'quincenal':'diario'} de reportes</li>
+      <li>Nuevo corte de reporte — <strong style="color:var(--text)">en 15 días</strong></li>
+    </ol>`;
+
+  el('resumen-final').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[
+        {v:cumplPct+'%',l:'Cumplimiento de carga',c:'var(--g)'},
+        {v:fmtN(totalAsig-totalCarg),l:'Locales sin reporte',c:'var(--r)'},
+        {v:fmtN(vData.reduce((s,r)=>s+(r.CANTIDAD||0),0)),l:'Unidades en riesgo de vencimiento',c:'var(--y)'},
+        {v:alerts.length,l:'Alertas críticas activas',c:'var(--r)'},
+        {v:aData.length,l:'Productos averiados',c:'var(--o)'},
+      ].map(i=>`<div style="display:flex;align-items:center;gap:14px">
+        <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:${i.c};min-width:70px;text-align:right">${i.v}</div>
+        <div style="font-size:13px;color:var(--muted)">${i.l}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+function updateRangeBadge(vData,aData){
+  const corte=getCorte();
+  const fmt=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(2)}`;
+  document.getElementById('corteLbl').textContent=`Corte: ${fmt(corte)}`;
+  const total=vData.length+aData.length;
+  el('rbadge').innerHTML=`<strong>${fmtN(total)}</strong> registros en el rango`;
+}
+
+// ═══════════════════════════════════
+// MAIN RENDER
+// ═══════════════════════════════════
+function renderAll(){
+  const vData=filterData(RV);
+  const aData=filterData(RA);
+  const cumpl=calcCumplimiento(vData);
+  const alerts=calcAlerts(vData);
+  updateRangeBadge(vData,aData);
+
+  const totalAsig=RR.length;
+  const totalCarg=cumpl.reduce((s,r)=>s+r.cargados,0);
+  const sinCargar=totalAsig-totalCarg;
+  const cumplPct=totalAsig?Math.round(totalCarg/totalAsig*100):0;
+  const totalVU=Math.round(vData.reduce((s,r)=>s+(r.CANTIDAD||0),0));
+  const totalAU=Math.round(aData.reduce((s,r)=>s+(r.CANTIDAD||0),0));
+  const best=cumpl.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct)[0];
+
+  // ── TAB 0: Resumen ──
+  renderKPIs('kpi-resumen',[
+    {lbl:'Locales Asignados',val:fmtN(totalAsig),sub:'Total cobertura teórica',color:'var(--b)'},
+    {lbl:'Locales Cargados',val:fmtN(totalCarg),sub:'Con reporte registrado',color:'var(--g)',valColor:'var(--g)'},
+    {lbl:'Sin Cargar',val:fmtN(sinCargar),sub:'Pendientes de reporte',color:'var(--r)',valColor:sinCargar>0?'var(--r)':'var(--g)'},
+    {lbl:'Cumplimiento',val:cumplPct+'%',sub:'Meta: 100%',color:'var(--y)',valColor:cumplPct>=80?'var(--g)':cumplPct>=50?'var(--y)':'var(--r)'},
+  ]);
+  if(sinCargar>0){
+    const cero=cumpl.filter(r=>r.pct===0).length;
+    el('s0').querySelectorAll('.abox').forEach(e=>e.remove());
+    const aboxEl=document.createElement('div');
+    aboxEl.className='abox danger';
+    aboxEl.innerHTML=`⚠ <span>El <strong>${100-cumplPct}%</strong> de los locales no presentan reporte al corte. Se requiere acción correctiva sobre los <strong>${cero} repositores</strong> con 0% de cumplimiento.${best?` Único repositor con carga: <strong>${best.name}</strong> (${best.pct}% — ${best.cargados}/${best.total} locales).`:''}`;
+    el('s0').querySelector('#kpi-resumen').after(aboxEl);
+  }
+  renderStackedBars('chart-cumpl-resumen',cumpl);
+  renderAlerts('alerts-resumen',alerts);
+  renderCadena('chart-cadena-resumen');
+  renderTimeline('timeline-resumen',vData);
+
+  // ── TAB 1: Cumplimiento ──
+  renderKPIs('kpi-cumpl',[
+    {lbl:'Total Asignados',val:fmtN(totalAsig),sub:'PDVs en el ruteo',color:'var(--b)'},
+    {lbl:'Cargados',val:fmtN(totalCarg),sub:'Con reporte en el período',color:'var(--g)',valColor:'var(--g)'},
+    {lbl:'Pendientes',val:fmtN(sinCargar),sub:'Sin reporte cargado',color:'var(--r)',valColor:'var(--r)'},
+    {lbl:'% Cumplimiento',val:cumplPct+'%',sub:'Meta: 100%',color:'var(--y)',valColor:cumplPct>=80?'var(--g)':cumplPct>=50?'var(--y)':'var(--r)'},
+  ]);
+  {
+    const abEl=el('abox-cumpl');
+    if(sinCargar>0){
+      abEl.innerHTML=`<div class="abox danger">⚠ <span>El <strong>${100-cumplPct}%</strong> de los locales asignados no presentan reporte cargado a la fecha de corte.</span></div>`;
+    } else {
+      abEl.innerHTML=`<div class="abox" style="border-color:var(--g);background:rgba(34,197,94,.07)">✅ <span>Cobertura completa — todos los locales tienen reporte registrado.</span></div>`;
+    }
+  }
+  renderStackedBars('chart-cumpl-main',cumpl);
+  renderCadenaBars('chart-cadena-main');
+  renderBrechaTable(cumpl);
+
+  // ── TAB 2: Vencimientos ──
+  renderKPIs('kpi-vencer',[
+    {lbl:'Registros',val:fmtN(vData.length),sub:'En el período',color:'var(--g)'},
+    {lbl:'Puntos de Venta',val:fmtN(new Set(vData.map(r=>r['PUNTO DE VENTA'])).size),sub:'Locales relevados',color:'var(--b)'},
+    {lbl:'SKUs únicos',val:fmtN(new Set(vData.map(r=>r.PRODUCTO)).size),sub:'Productos distintos',color:'var(--y)'},
+    {lbl:'Unidades en riesgo',val:fmtN(totalVU),sub:'Total de unidades',color:'var(--g)'},
+  ]);
+  renderBars('chart-prod-v',aggBy(vData,'PRODUCTO'),'var(--g)');
+  renderBars('chart-pdv-v',aggBy(vData,'PUNTO DE VENTA'),'var(--b)');
+  renderAlerts('alerts-v',alerts);
+  renderTimeline('timeline-v',vData);
+  renderVTable(vData);
+
+  // ── TAB 3: Averiados ──
+  const topAver=aData.length?aggBy(aData,'PUNTO DE VENTA')[0]:null;
+  renderKPIs('kpi-aver',[
+    {lbl:'Registros',val:fmtN(aData.length),sub:'Entradas reportadas',color:'var(--r)'},
+    {lbl:'Puntos de Venta',val:fmtN(new Set(aData.map(r=>r['PUNTO DE VENTA'])).size),sub:'Con productos averiados',color:'var(--b)'},
+    {lbl:'Unidades averiadas',val:fmtN(totalAU),sub:'Total en el período',color:'var(--r)',valColor:'var(--r)'},
+  ]);
+  {
+    const abEl=el('abox-aver');
+    if(topAver){
+      const pct=totalAU?Math.round(topAver[1]/totalAU*100):0;
+      abEl.innerHTML=`<div class="abox danger">⚠ <span><strong>${topAver[0]}</strong> concentra <strong>${fmtN(topAver[1])} unidades</strong> averiadas (${pct}% del total). Requiere atención prioritaria.</span></div>`;
+    } else abEl.innerHTML='';
+  }
+  renderBars('chart-prod-a',aggBy(aData,'PRODUCTO'),'var(--r)',10,'r');
+  renderBars('chart-pdv-a',aggBy(aData,'PUNTO DE VENTA'),'var(--b)');
+  renderATable(aData);
+
+  // ── TAB 4: Recomendaciones ──
+  renderRecomendaciones(vData,aData,cumpl);
+}
+
+// ═══════════════════════════════════
+// GOOGLE SHEETS LIVE LOADER
+// ═══════════════════════════════════
+// Una sola hoja con todas las respuestas.
+// Columnas:
+//   FECHA DEL RELEVAMIENTO | NOMBRE DEL RELEVADOR | PUNTO DE VENTA
+//   TIENE PRODUCTOS PROXIMOS A VENCER? SI/NO | PRODUCTOS PROXIMOS A VENCER
+//   FECHA DE VENCIMIENTO | CANTIDAD DE PRODUCTOS PROXIMOS A VENCER
+//   TIENE PRODUCTOS AVERIADOS? SI/NO | PRODUCTOS AVERIADOS
+//   OBSERVACION DEL PRODUCTO AVERIADO | CANTIDAD DE PRODUCTOS AVERIADOS
+
+const GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSSKZQ31C9CjyKFSEl8kJF4XMudN_HjQ1dA8NfupMuTTtQ5M5fQzxMVEPxA4ckV-M5KTc5eYpAY2sne/pub?output=csv';
+
+function setSyncStatus(state, msg){
+  const dot=document.getElementById('sync-dot');
+  const status=document.getElementById('sync-status');
+  dot.className='sync-dot '+state;
+  status.textContent=msg;
+}
+
+// Parse a CSV string into array of objects
+function parseCSV(csv){
+  const lines=csv.trim().split('\n');
+  if(lines.length<2) return [];
+  const headers=splitCSVLine(lines[0]).map(h=>h.trim());
+  return lines.slice(1)
+    .map(line=>{ const f=splitCSVLine(line); const r={}; headers.forEach((h,i)=>r[h]=(f[i]||'').trim()); return r; })
+    .filter(r=>r['FECHA DEL RELEVAMIENTO'] && r['FECHA DEL RELEVAMIENTO']!=='FECHA DEL RELEVAMIENTO');
+}
+
+// Robust CSV line splitter (handles quoted commas)
+function splitCSVLine(line){
+  const fields=[]; let cur='', inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){ inQ=!inQ; }
+    else if(c===','&&!inQ){ fields.push(cur); cur=''; }
+    else{ cur+=c; }
+  }
+  fields.push(cur);
+  return fields.map(f=>f.replace(/^"|"$/g,''));
+}
+
+// Format a date string to DD/MM/YYYY
+function normDate(s){
+  if(!s||!s.trim()) return '';
+  // Already DD/MM/YYYY
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s.trim())) return s.trim();
+  // YYYY-MM-DD
+  const m=s.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  // MM/DD/YYYY (Google Sheets US format)
+  const m2=s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m2) return `${String(m2[2]).padStart(2,'0')}/${String(m2[1]).padStart(2,'0')}/${m2[3]}`;
+  return s.trim();
+}
+
+// Split raw rows into VENCER and AVERIADOS arrays
+function splitRows(rows){
+  const vencer=[], aver=[];
+  rows.forEach(r=>{
+    const fecha  = normDate(r['FECHA DEL RELEVAMIENTO']);
+    const rel    = (r['NOMBRE DEL RELEVADOR']||'').trim();
+    const pdv    = (r['PUNTO DE VENTA']||'').trim();
+    const tieneV = (r['TIENE PRODUCTOS PROXIMOS A VENCER? SI/NO']||'').trim().toUpperCase();
+    const tieneA = (r['TIENE PRODUCTOS AVERIADOS? SI/NO']||'').trim().toUpperCase();
+
+    if(tieneV==='SI' || tieneV==='SÍ'){
+      const prod  = (r['PRODUCTOS PROXIMOS A VENCER']||'').trim();
+      const vence = normDate(r['FECHA DE VENCIMIENTO']);
+      const cant  = parseFloat(r['CANTIDAD DE PRODUCTOS PROXIMOS A VENCER'])||0;
+      if(prod){
+        vencer.push({
+          'FECHA': fecha,
+          'RELEVADOR': rel,
+          'PUNTO DE VENTA': pdv,
+          'TIENE PROD. A VENCER': 'SI',
+          'CODIGO DE BARRA': '',
+          'PRODUCTO': prod,
+          'CUANDO VENCE': vence,
+          'CANTIDAD': cant
+        });
+      }
+    }
+
+    if(tieneA==='SI' || tieneA==='SÍ'){
+      const prod  = (r['PRODUCTOS AVERIADOS']||'').trim();
+      const cant  = parseFloat(r['CANTIDAD DE PRODUCTOS AVERIADOS'])||0;
+      const motivo= (r['OBSERVACION DEL PRODUCTO AVERIADO']||'').trim();
+      if(prod){
+        aver.push({
+          'FECHA': fecha,
+          'RELEVADOR': rel,
+          'PUNTO DE VENTA': pdv,
+          'TIENE PROD. AVERIADOS': 'SI',
+          'CODIGO DE BARRA': '',
+          'PRODUCTO': prod,
+          'CANTIDAD': cant,
+          'MOTIVO': motivo
+        });
+      }
+    }
+  });
+  return {vencer, aver};
+}
+
+async function loadSheetData(manual=false){
+  setSyncStatus('loading','Actualizando desde Google Sheets…');
+  try{
+    const resp=await fetch(GS_URL+'&t='+Date.now());
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const csv=await resp.text();
+    const rows=parseCSV(csv);
+    if(!rows.length) throw new Error('Hoja vacía o sin datos');
+
+    const {vencer, aver}=splitRows(rows);
+
+    // Update global arrays in place (keep RR/ruteo untouched)
+    if(vencer.length){ RV.length=0; vencer.forEach(r=>RV.push(r)); }
+    if(aver.length)  { RA.length=0; aver.forEach(r=>RA.push(r));   }
+
+    const now=new Date();
+    const t=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('sync-time').textContent=`Última actualización: ${t}`;
+    setSyncStatus('live',`Google Sheets en vivo — ${vencer.length} venc. · ${aver.length} aver.`);
+    buildQuincenas();
+    renderTags();
+    renderAll();
+  }catch(err){
+    setSyncStatus('error','Sin conexión con Google Sheets — mostrando datos guardados');
+    console.warn('Sheets error:',err);
+    if(manual) alert('No se pudo conectar con Google Sheets.\n\nVerificá que la hoja esté publicada:\nArchivo → Compartir → Publicar en la web → CSV → Publicar');
+    renderAll();
+  }
+}
+
+// Auto-refresh every 5 minutes
+setInterval(()=>loadSheetData(false), 5*60*1000);
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+window.addEventListener('load',()=>{
+  buildQuincenas();
+  renderTags();
+  renderAll();
+  // Load live data after initial render
+  setTimeout(()=>loadSheetData(false), 500);
+});
+document.getElementById('fechaCorte').addEventListener('change',renderAll);
+</script>
+</body>
+</html>
