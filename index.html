@@ -160,6 +160,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .cadena-count{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--g);}
 .cadena-sub{font-size:9px;color:var(--muted);}
 
+/* ── BRECHA ACCORDION ── */
+.brecha-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px;}
+.brecha-arrow{display:inline-block;transition:transform .2s;font-size:11px;color:var(--muted);}
+.brecha-arrow.open{transform:rotate(90deg);}
+.brecha-detail{display:none;background:var(--surface2);}
+.brecha-detail.open{display:table-row-group;}
+.brecha-pdv-row td{padding:5px 10px 5px 28px;font-size:11px;border-bottom:1px solid var(--border);color:var(--muted);}
+.brecha-pdv-row .pdv-name{color:var(--text);}
+.brecha-pdv-row .pdv-status{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;}
+.pdv-ok{background:rgba(34,197,94,.12);color:var(--g);}
+.pdv-pend{background:rgba(239,68,68,.12);color:var(--r);}
+
 /* ── EMPTY / ANIM ── */
 .empty{text-align:center;padding:32px;color:var(--muted);font-size:13px;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -377,7 +389,7 @@ window._pptxReady=true;
       <div id="chart-cumpl-resumen"></div>
     </div>
     <div class="panel">
-      <div class="ptitle"><div class="d" style="background:var(--r)"></div>Alertas Críticas Activas (≤30 días)</div>
+      <div class="ptitle"><div class="d" style="background:var(--r)"></div>Alertas Críticas Activas (≤90 días)</div>
       <div id="alerts-resumen"></div>
     </div>
   </div>
@@ -433,7 +445,7 @@ window._pptxReady=true;
   </div>
   <div class="panels eq">
     <div class="panel">
-      <div class="ptitle"><div class="d" style="background:var(--r)"></div>⚠ Alertas Críticas — Vencen en ≤30 días</div>
+      <div class="ptitle"><div class="d" style="background:var(--r)"></div>⚠ Alertas Críticas — Vencen en ≤90 días</div>
       <div id="alerts-v"></div>
     </div>
     <div class="panel">
@@ -762,7 +774,7 @@ function calcAlerts(vData){
     const vence=parseDate(r['CUANDO VENCE']);
     if(!vence)return;
     const days=diffDays(corte,vence);
-    if(days<=30&&days>=0){
+    if(days<=90&&days>=0){
       critical.push({...r,vence,days});
     }
   });
@@ -844,8 +856,8 @@ function renderAlerts(id,alerts){
   const c=el(id);if(!c)return;
   if(!alerts.length){c.innerHTML='<div class="empty">✅ Sin alertas críticas en este período</div>';return;}
   c.innerHTML=`<div class="alert-grid">${alerts.slice(0,5).map(r=>{
-    const cls=r.days<=7?'bc-r':r.days<=15?'bc-y':'bc-g';
-    const stripe=r.days<=7?'var(--r)':r.days<=15?'var(--y)':'var(--g)';
+    const cls=r.days<=7?'bc-r':r.days<=30?'bc-y':'bc-g';
+    const stripe=r.days<=7?'var(--r)':r.days<=30?'var(--y)':'var(--g)';
     return`<div class="alert-card">
       <div class="alert-stripe" style="background:${stripe}"></div>
       <div class="alert-body">
@@ -885,17 +897,66 @@ function renderCadenaBars(id){
 
 function renderBrechaTable(cumplData){
   const t=el('tbl-brecha');
-  t.innerHTML=cumplData.map(r=>{
+
+  // Build visited PDV set using same logic as calcCumplimiento
+  function inRange(fecha){
+    const d=parseDate(fecha);if(!d)return false;
+    if(selectedQ&&selectedQ.length){
+      return selectedQ.some(s=>{
+        const q=ALL_Q.find(x=>x.sort===s);if(!q)return false;
+        return d>=new Date(q.from)&&d<=new Date(q.to+'T23:59:59');
+      });
+    }
+    const corte=getCorte();
+    const today=new Date();today.setHours(23,59,59);
+    return d<=(corte>today?today:corte);
+  }
+  const visitedPDVs=new Set();
+  filterData(RV).forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
+  RA.filter(r=>inRange(r.FECHA)).forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
+  RVISITAS.filter(r=>inRange(r.FECHA)).forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
+
+  t.innerHTML=cumplData.map((r,idx)=>{
     const color=r.pct>=80?'var(--g)':r.pct>=50?'var(--y)':'var(--r)';
     const star=r.pct>0?'★ ':'';
-    return`<tr>
-      <td><strong>${star}${r.name}</strong></td>
+    const uid=`brecha-${idx}`;
+    const hasPending=r.pendientes>0;
+
+    // Main row
+    const mainRow=`<tr>
+      <td>
+        <div class="brecha-toggle" onclick="toggleBrecha('${uid}',this)">
+          <span class="brecha-arrow">▶</span>
+          <strong>${star}${r.name}</strong>
+        </div>
+      </td>
       <td class="mono">${r.total}</td>
       <td class="mono" style="color:var(--g)">${r.cargados}</td>
-      <td class="mono" style="color:var(--r)">${r.pendientes}</td>
+      <td class="mono" style="color:${r.pendientes>0?'var(--r)':'var(--g)'}">${r.pendientes}</td>
       <td class="mono" style="color:${color};font-weight:700">${r.pct}%</td>
     </tr>`;
+
+    // Detail rows — all assigned PDVs with status
+    const detailRows=r.asignados.map(pdv=>{
+      const visited=visitedPDVs.has(pdv.norm);
+      return`<tr class="brecha-pdv-row">
+        <td colspan="4"><span class="pdv-name">${pdv.pdv}</span></td>
+        <td><span class="pdv-status ${visited?'pdv-ok':'pdv-pend'}">${visited?'✓ Visitado':'✗ Pendiente'}</span></td>
+      </tr>`;
+    }).join('');
+
+    return`${mainRow}<tr class="brecha-detail" id="${uid}"><td colspan="5" style="padding:0">
+      <table style="width:100%;border-collapse:collapse">${detailRows}</table>
+    </td></tr>`;
   }).join('');
+}
+
+function toggleBrecha(uid, toggleEl){
+  const detail=document.getElementById(uid);
+  const arrow=toggleEl.querySelector('.brecha-arrow');
+  const isOpen=detail.classList.contains('open');
+  detail.classList.toggle('open',!isOpen);
+  arrow.classList.toggle('open',!isOpen);
 }
 
 function renderVTable(data){
@@ -952,7 +1013,7 @@ function renderRecomendaciones(vData,aData,cumpl){
       title:'Gestión de Vencimientos — Acción Inmediata',
       text:alerts.length>0
         ?`${alerts.length} alerta${alerts.length>1?'s críticas':'  crítica'} activa${alerts.length>1?'s':''} con ${fmtN(alerts.reduce((s,r)=>s+(r.CANTIDAD||0),0))} unidades. Coordinar retiro o activación urgente con los puntos de venta afectados.`
-        :'Sin vencimientos críticos en los próximos 30 días. Monitorear productos del siguiente mes.'
+        :'Sin vencimientos críticos en los próximos 90 días.'
     },
     {
       n:'03',
@@ -1409,7 +1470,7 @@ function generarInforme(){
     const alertsShow=alerts.slice(0,3);
     alertsShow.forEach((r,i)=>{
       const y=2.3+i*1.0;
-      const color=r.days<=7?R:r.days<=15?Y:G;
+      const color=r.days<=7?R:r.days<=30?Y:G;
       s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:9.64,h:0.88,fill:{color:CARD},line:{color:BORDER}});
       s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:0.06,h:0.88,fill:{color:color},line:{color:color}});
       s.addText(r.PRODUCTO,{x:0.35,y:y+0.06,w:6,h:0.35,fontSize:12,fontFace:'Calibri',color:WHITE,bold:true});
