@@ -204,7 +204,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .cadena-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js"></script>
+<script>
+// Load PptxGenJS dynamically
+(function(){
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js';
+  s.onload = () => { window._pptxReady = true; console.log('PptxGenJS loaded'); };
+  s.onerror = () => {
+    // Fallback to unpkg
+    const s2 = document.createElement('script');
+    s2.src = 'https://unpkg.com/pptxgenjs@3.12.0/libs/pptxgen.bundle.js';
+    s2.onload = () => { window._pptxReady = true; console.log('PptxGenJS loaded (fallback)'); };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+})();
+</script>
 </head>
 <body>
 
@@ -1177,8 +1192,33 @@ setInterval(()=>loadSheetData(false), 5*60*1000);
 // GENERAR INFORME PDF
 // ═══════════════════════════════════
 function generarInforme(){
+  // Check if PptxGenJS is available
   if(typeof PptxGenJS === 'undefined'){
-    alert('La librería de PowerPoint aún está cargando. Esperá un momento e intentá de nuevo.');
+    // Try to load it on-demand if not yet loaded
+    const btn = document.querySelector('.gen-btn');
+    if(btn) { btn.textContent = '⏳ Cargando...'; btn.disabled = true; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js';
+    s.onload = () => {
+      window._pptxReady = true;
+      if(btn) { btn.textContent = '📊 Generar Informe PPT'; btn.disabled = false; }
+      generarInforme();
+    };
+    s.onerror = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://unpkg.com/pptxgenjs@3.12.0/libs/pptxgen.bundle.js';
+      s2.onload = () => {
+        window._pptxReady = true;
+        if(btn) { btn.textContent = '📊 Generar Informe PPT'; btn.disabled = false; }
+        generarInforme();
+      };
+      s2.onerror = () => {
+        if(btn) { btn.textContent = '📊 Generar Informe PPT'; btn.disabled = false; }
+        alert('No se pudo cargar la librería. Verificá tu conexión a internet.');
+      };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
     return;
   }
 
