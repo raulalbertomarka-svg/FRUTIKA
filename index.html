@@ -615,32 +615,42 @@ function switchTab(i,el){
 // CUMPLIMIENTO LOGIC
 // ═══════════════════════════════════
 function calcCumplimiento(vData){
-  const corte=getCorte();
-  const{from,to}=getFilter();
+  // vData already comes filtered by the active date/quincena range
+  // We must apply the SAME filter to RA and RVISITAS manually
 
-  // Visited PDVs = union of vencer + averiados + pure visits (NO en ambas preguntas)
-  // Filter visits by the same date range as the rest of the data
+  // Helper: check if a date falls in the currently active filter range
+  function inRange(fecha){
+    const d=parseDate(fecha);
+    if(!d) return false;
+    // If quincenas selected, check against each
+    if(selectedQ&&selectedQ.length){
+      return selectedQ.some(s=>{
+        const q=ALL_Q.find(x=>x.sort===s);if(!q)return false;
+        return d>=new Date(q.from)&&d<=new Date(q.to+'T23:59:59');
+      });
+    }
+    // Otherwise: from start up to corte (today)
+    const corte=getCorte();
+    const today=new Date(); today.setHours(23,59,59);
+    const effectiveTo=corte>today?today:corte;
+    return d<=effectiveTo;
+  }
+
+  // Build set of visited PDVs within the EXACT same period
   const visitedPDVs=new Set();
 
-  // From vencer data (filtered)
+  // From filtered vencer (already filtered — passed as vData)
   vData.forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
 
-  // From averiados data (filtered)
-  filterData(RA).forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
+  // From averiados — apply same range filter
+  RA.filter(r=>inRange(r.FECHA))
+    .forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
 
-  // From pure visits (Sheets rows where both were NO)
-  // Apply same date filter but be lenient with corte — visits today count
-  const visitCorte=new Date(); visitCorte.setHours(23,59,59);
-  RVISITAS.forEach(r=>{
-    const d=parseDate(r.FECHA);
-    if(!d) return;
-    if(from && d<from) return;
-    // Use max(to, today) so today's visits always count
-    const effectiveTo = to && to < visitCorte ? visitCorte : to;
-    if(effectiveTo && d>effectiveTo) return;
-    visitedPDVs.add(normStr(r['PUNTO DE VENTA']));
-  });
+  // From pure visits (NO/NO rows from Sheets) — same range filter
+  RVISITAS.filter(r=>inRange(r.FECHA))
+    .forEach(r=>visitedPDVs.add(normStr(r['PUNTO DE VENTA'])));
 
+  // Now cross with ruteo to compute per-repositor cumplimiento
   const byRep={};
   RR.forEach(row=>{
     const rep=normStr(row.REPOSITOR);
