@@ -1188,7 +1188,7 @@ function parseCSV(csv){
   const headers=splitCSVLine(lines[0]).map(h=>h.trim());
   return lines.slice(1)
     .map(line=>{ const f=splitCSVLine(line); const r={}; headers.forEach((h,i)=>r[h]=(f[i]||'').trim()); return r; })
-    .filter(r=>r['FECHA DEL RELEVAMIENTO'] && r['FECHA DEL RELEVAMIENTO']!=='FECHA DEL RELEVAMIENTO' && r['NOMBRE DEL RELEVADOR']);
+    .filter(r=>r['FECHA DEL RELEVAMIENTO'] && r['FECHA DEL RELEVAMIENTO']!=='FECHA DEL RELEVAMIENTO');
 }
 
 // Robust CSV line splitter (handles quoted commas)
@@ -1264,10 +1264,11 @@ function splitRows(rows){
 
     if(tieneA==='SI'){
       const prod  = (r['PRODUCTOS AVERIADOS']||'').trim();
-      const cant  = parseFloat(r['CANTIDAD DE PRODUCTOS AVERIADOS'])||0;
-      // Combine checklist motivo + free-text "otro" field
+      const cant  = parseFloat(r['CANTIDAD DE PRODUCTOS AVERIADOS']||r['CANTIDAD DE PRODUCTOS  AVERIADOS']||0)||0;
+      // Combine checklist motivo + free-text campo
+      // Column J = MOTIVO DE AVERIA (checklist), Column K = MOTIVO DE AVIERA/OTRO OBSERVACION
       const motivoCheck = (r['MOTIVO DE AVERIA']||'').trim();
-      const motivoOtro  = (r['MOTIVO DE AVIERA/OTRO OBSERVACION']||r['OBSERVACION DEL PRODUCTO AVERIADO']||'').trim();
+      const motivoOtro  = (r['MOTIVO DE AVIERA/OTRO OBSERVACION']||r['MOTIVO DE AVERIA/OTRO OBSERVACION']||r['OBSERVACION DEL PRODUCTO AVERIADO']||'').trim();
       const motivo = [motivoCheck, motivoOtro].filter(Boolean).join(' — ');
       if(prod){
         let cbarA='', prodNameA=prod;
@@ -1296,7 +1297,12 @@ async function loadSheetData(manual=false){
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const csv=await resp.text();
     const rows=parseCSV(csv);
-    if(!rows.length) throw new Error('Hoja vacía o sin datos');
+    // Debug: log first row keys to console
+    if(rows.length>0) console.log('Sheets headers detected:', Object.keys(rows[0]));
+    else {
+      console.warn('CSV parsed but 0 rows. Raw CSV start:', csv.substring(0,500));
+      throw new Error('Hoja vacía o sin datos');
+    }
 
     const {vencer, aver, visitas}=splitRows(rows);
     console.log(`Parsed: ${rows.length} filas → ${vencer.length} venc, ${aver.length} aver, ${visitas.length} visitas`);
