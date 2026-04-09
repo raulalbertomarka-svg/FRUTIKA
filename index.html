@@ -431,26 +431,20 @@ function getFilter(){
 }
 function filterData(raw){
   const corte=getCorte();
-  // If specific quincenas selected, use per-record range check
+  // If specific quincenas selected, filter by those ranges
   if(selectedQ&&selectedQ.length){
     return raw.filter(r=>{
       const d=parseDate(r.FECHA);if(!d)return false;
-      if(d>corte)return false;
-      // check if date falls in any selected quincena
       return selectedQ.some(s=>{
         const q=ALL_Q.find(x=>x.sort===s);if(!q)return false;
-        const qFrom=new Date(q.from);
-        const qTo=new Date(q.to+'T23:59:59');
-        return d>=qFrom&&d<=qTo;
+        return d>=new Date(q.from) && d<=new Date(q.to+'T23:59:59');
       });
     });
   }
-  const{from,to}=getFilter();
+  // No quincena filter — show ALL records up to corte (no lower bound)
   return raw.filter(r=>{
     const d=parseDate(r.FECHA);if(!d)return false;
-    if(from && d<from)return false;
-    if(to && d>to)return false;
-    return true;
+    return d<=corte;
   });
 }
 
@@ -1423,17 +1417,20 @@ EJECUTIVO',{x:5.4,y:0.4,w:4.3,h:1.3,fontSize:30,fontFace:'Arial Black',color:WHI
 // INIT
 // ═══════════════════════════════════
 window.addEventListener('load',()=>{
-  // Set corte to today's date by default
+  // Set corte to today
   const today=new Date();
   const yy=today.getFullYear();
   const mm=String(today.getMonth()+1).padStart(2,'0');
   const dd=String(today.getDate()).padStart(2,'0');
   document.getElementById('fechaCorte').value=`${yy}-${mm}-${dd}`;
-  buildQuincenas();
-  renderTags();
-  renderAll();
-  // Load live data after initial render
-  setTimeout(()=>loadSheetData(false), 500);
+  // Small delay so the DOM value is set before rendering
+  setTimeout(()=>{
+    buildQuincenas();
+    renderTags();
+    renderAll();
+    // Then load live Sheets data
+    setTimeout(()=>loadSheetData(false), 300);
+  }, 50);
 });
 document.getElementById('fechaCorte').addEventListener('change',renderAll);
 </script>
