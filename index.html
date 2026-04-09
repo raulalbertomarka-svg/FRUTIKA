@@ -1301,16 +1301,53 @@ async function loadSheetData(manual=false){
     const {vencer, aver, visitas}=splitRows(rows);
     console.log(`Parsed: ${rows.length} filas → ${vencer.length} venc, ${aver.length} aver, ${visitas.length} visitas`);
 
-    // REPLACE strategy: Sheets is the source of truth.
-    // Always replace with Sheets data so deletions are reflected.
-    // Historical Excel data (RV/RA) is only used as fallback if Sheets has 0 rows.
-    if(vencer.length > 0){ RV.length=0; vencer.forEach(r=>RV.push(r)); }
-    if(aver.length > 0)  { RA.length=0; aver.forEach(r=>RA.push(r)); }
+    // SMART MERGE: keep Excel historical data + replace only Sheets date range.
+    // 1. Find the earliest and latest date in incoming Sheets data
+    // 2. Remove from RV/RA any record that falls in that date range (those came from Sheets before)
+    // 3. Add all incoming Sheets records
+    // This way: Excel historical data is preserved, Sheets data is always fresh (deletions reflected)
 
-    // Visitas: also replace fully
-    RVISITAS.length=0; visitas.forEach(r=>RVISITAS.push(r));
+    function smartMerge(existing, incoming){
+      if(!incoming.length) return; // Sheets empty — keep everything
+      // Find date range of incoming Sheets data
+      const parseDDMMYYYY=s=>{
+        if(!s) return null;
+        const p=s.split('/');
+        return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):null;
+      };
+      const inDates=incoming.map(r=>parseDDMMYYYY(r.FECHA)).filter(Boolean);
+      if(!inDates.length) return;
+      const minDate=new Date(Math.min(...inDates));
+      const maxDate=new Date(Math.max(...inDates));
+      maxDate.setHours(23,59,59);
+      // Remove existing records that fall within the Sheets date range
+      for(let i=existing.length-1;i>=0;i--){
+        const d=parseDDMMYYYY(existing[i].FECHA);
+        if(d && d>=minDate && d<=maxDate) existing.splice(i,1);
+      }
+      // Add all incoming records
+      incoming.forEach(r=>existing.push(r));
+    }
 
-    console.log(`Sheets loaded: ${vencer.length} venc, ${aver.length} aver, ${visitas.length} visitas`);
+    smartMerge(RV, vencer);
+    smartMerge(RA, aver);
+
+    // Visitas: same smart merge
+    if(visitas.length){
+      const parseDDMMYYYY=s=>{const p=(s||'').split('/');return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):null;};
+      const inDates=visitas.map(r=>parseDDMMYYYY(r.FECHA)).filter(Boolean);
+      if(inDates.length){
+        const minDate=new Date(Math.min(...inDates));
+        const maxDate=new Date(Math.max(...inDates)); maxDate.setHours(23,59,59);
+        for(let i=RVISITAS.length-1;i>=0;i--){
+          const d=parseDDMMYYYY(RVISITAS[i].FECHA);
+          if(d && d>=minDate && d<=maxDate) RVISITAS.splice(i,1);
+        }
+      }
+      visitas.forEach(r=>RVISITAS.push(r));
+    }
+
+    console.log(`Smart merge: ${vencer.length} venc + ${aver.length} aver from Sheets | RV total: ${RV.length}, RA total: ${RA.length}`);
 
     const now=new Date();
     const t=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
