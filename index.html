@@ -549,7 +549,16 @@ const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov',
 function parseDate(s){if(!s||s.trim()==='')return null;const p=s.split('/');if(p.length===3)return new Date(+p[2],+p[1]-1,+p[0]);return null;}
 function fmtDate(d){if(!d)return'—';return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}
 function fmtN(n){return Math.round(n).toLocaleString('es-PY');}
-function normStr(s){return String(s).toUpperCase().trim().replace(/\s*-\s*/g,' ').replace(/\s+/g,' ').replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U').replace(/Ñ/g,'N');}
+function normStr(s){
+  let r=String(s).toUpperCase().trim();
+  // Remove accents
+  r=r.replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U').replace(/Ñ/g,'N');
+  // Remove separators
+  r=r.replace(/\s*-\s*/g,' ').replace(/\s+/g,' ').trim();
+  // Strip common prefixes so "SUPERMERCADO LT EMBOSCADA" == "LT EMBOSCADA"
+  r=r.replace(/^(SUPERMERCADOS?|HIPERMERCADO|HUPERMERCADO|CADENA|CADENA REAL)\s+/,'');
+  return r;
+}
 function normRep(s){return normStr(s.replace(/^\d+\.\s*/,''));}
 function getCorte(){const v=document.getElementById('fechaCorte').value;return v?new Date(v+'T23:59:59'):new Date();}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
