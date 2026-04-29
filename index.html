@@ -1343,38 +1343,49 @@ async function loadSheetData(manual=false){
   }
   setSyncStatus('loading','Actualizando desde Google Sheets…');
   try{
-    // Fetch all 3 sheets in parallel
-    const [resp1, resp2] = await Promise.all([
-      fetch(GS_URL+'&t='+Date.now()),
-      fetch(GS_RUTEO+'&t='+Date.now()),
-    ]);
+    // Fetch Hoja 1 (respuestas) and Hoja 2 (ruteo) independently
+    // so a failure in one doesn't block the other
+    const resp1 = await fetch(GS_URL+'&t='+Date.now());
     if(!resp1.ok) throw new Error('HTTP '+resp1.status+' (Hoja 1)');
-    if(!resp2.ok) throw new Error('HTTP '+resp2.status+' (Hoja 2)');
+    const csv = await resp1.text();
 
-    const [csv, csvRuteo] = await Promise.all([resp1.text(), resp2.text()]);
-
-    // Parse Hoja 2 → RR (ruteo)
-    const ruteoRows = parseCSV(csvRuteo).filter(r=>r['REPOSITOR']||r['A']||Object.values(r)[0]);
-    if(ruteoRows.length > 0){
-      RR.length = 0;
-      ruteoRows.forEach(r=>{
-        // Hoja 2: Col A = REPOSITOR, Col B = PDV (or named headers)
-        // Headers can be any case: repositor/REPOSITOR, Locales/PDV/LOCAL etc.
-        // Normalize all keys to uppercase for matching
-        const rk = Object.fromEntries(Object.entries(r).map(([k,v])=>[k.toUpperCase().trim(),v]));
-        const rep = (rk['REPOSITOR']||rk['REPOSITORES']||Object.values(r)[0]||'').trim();
-        const pdv = (rk['LOCALES']||rk['LOCAL']||rk['PDV']||rk['PUNTO DE VENTA']||Object.values(r)[1]||'').trim();
-        if(rep && pdv){
-          RR.push({
-            REPOSITOR: rep,
-            REP_NORM: normStr(rep),
-            PDV: pdv,
-            PDV_NORM: normStr(pdv),
-            CADENA: pdv.split(' - ')[0].trim()
-          });
+    // Load Hoja 2 (ruteo) separately with its own error handling
+    try{
+      const resp2 = await fetch(GS_RUTEO+'&t='+Date.now());
+      if(resp2.ok){
+        const csvRuteo = await resp2.text();
+        console.log('Hoja 2 CSV first 300 chars:', csvRuteo.substring(0,300));
+        // Parse: use position-based reading (col 0 = repositor, col 1 = locales)
+        // Skip header row, read all data rows
+        const lines = csvRuteo.trim().split('\n');
+        console.log(`Hoja 2: ${lines.length} lines`);
+        if(lines.length > 1){
+          RR.length = 0;
+          // Detect if first row is a header (contains letters, not a name+place combo)
+          const firstVals = splitCSVLine(lines[0]).map(v=>v.replace(/^"|"$/g,'').trim());
+          const startRow = (firstVals[0].toUpperCase().includes('REPOSIT') || firstVals[1].toUpperCase().includes('LOCAL')) ? 1 : 0;
+          console.log(`Hoja 2: header row detected at ${startRow}, starting data at row ${startRow}`);
+          for(let i=startRow; i<lines.length; i++){
+            const cols = splitCSVLine(lines[i]).map(v=>v.replace(/^"|"$/g,'').trim());
+            const rep = cols[0]||'';
+            const pdv = cols[1]||'';
+            if(rep && pdv){
+              RR.push({
+                REPOSITOR: rep,
+                REP_NORM: normStr(rep),
+                PDV: pdv,
+                PDV_NORM: normStr(pdv),
+                CADENA: pdv.split(' - ')[0].trim()
+              });
+            }
+          }
+          console.log(`Ruteo cargado: ${RR.length} PDVs de ${new Set(RR.map(r=>r.REPOSITOR)).size} repositores`);
         }
-      });
-      console.log(`Ruteo cargado: ${RR.length} PDVs de ${new Set(RR.map(r=>r.REPOSITOR)).size} repositores`);
+      } else {
+        console.warn('Hoja 2 fetch failed:', resp2.status);
+      }
+    }catch(e2){
+      console.warn('Error cargando Hoja 2 (ruteo):', e2);
     }
 
     const rows=parseCSV(csv);
