@@ -1359,8 +1359,11 @@ async function loadSheetData(manual=false){
       RR.length = 0;
       ruteoRows.forEach(r=>{
         // Hoja 2: Col A = REPOSITOR, Col B = PDV (or named headers)
-        const rep = (r['REPOSITOR']||r['A']||Object.values(r)[0]||'').trim();
-        const pdv = (r['PDV']||r['LOCAL']||r['PUNTO DE VENTA']||r['B']||Object.values(r)[1]||'').trim();
+        // Headers can be any case: repositor/REPOSITOR, Locales/PDV/LOCAL etc.
+        // Normalize all keys to uppercase for matching
+        const rk = Object.fromEntries(Object.entries(r).map(([k,v])=>[k.toUpperCase().trim(),v]));
+        const rep = (rk['REPOSITOR']||rk['REPOSITORES']||Object.values(r)[0]||'').trim();
+        const pdv = (rk['LOCALES']||rk['LOCAL']||rk['PDV']||rk['PUNTO DE VENTA']||Object.values(r)[1]||'').trim();
         if(rep && pdv){
           RR.push({
             REPOSITOR: rep,
