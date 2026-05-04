@@ -1467,35 +1467,39 @@ function generarInforme(){
   const G='22C55E', R='EF4444', B='3B82F6', Y='F59E0B', O='F97316';
   const WHITE='FFFFFF';
 
+  // Use widescreen 16x9 but allow more rows per slide
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_16x9';
   pres.title  = 'Frutika — Reporte de Campo — Corte ' + fmtC;
 
-  const W=10, H=5.625;
-  const makeShadow=()=>({type:'outer',blur:8,offset:3,angle:135,color:'000000',opacity:0.3});
+  const W=10, H=7.5; // taller slides for more content
+  pres.defineLayout({name:'WIDE_TALL', width:W, height:H});
+  pres.layout = 'WIDE_TALL';
+
+  const makeShadow=()=>({type:'outer',blur:6,offset:2,angle:135,color:'000000',opacity:0.3});
 
   function addBg(s){ s.background={color:BG}; }
 
   function addHeader(s, title, sub, ac){
-    s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:W,h:0.9,fill:{color:CARD},line:{color:CARD}});
-    s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:0.18,h:0.9,fill:{color:ac},line:{color:ac}});
-    s.addText(title,{x:0.3,y:0,w:W-0.5,h:0.6,fontSize:20,fontFace:'Arial',color:WHITE,bold:true,align:'left',valign:'middle'});
-    if(sub) s.addText(sub,{x:0.3,y:0.55,w:W-0.5,h:0.35,fontSize:11,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'});
+    s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:W,h:0.85,fill:{color:CARD},line:{color:CARD}});
+    s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:0.18,h:0.85,fill:{color:ac},line:{color:ac}});
+    s.addText(title,{x:0.3,y:0,w:W-0.5,h:0.55,fontSize:18,fontFace:'Arial',color:WHITE,bold:true,align:'left',valign:'middle'});
+    if(sub) s.addText(sub,{x:0.3,y:0.52,w:W-0.5,h:0.32,fontSize:10,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'});
   }
 
   function addKpi(s,x,y,w,h,val,lbl,sub,ac){
     s.addShape(pres.shapes.RECTANGLE,{x,y,w,h,fill:{color:CARD},line:{color:BORDER},shadow:makeShadow()});
     s.addShape(pres.shapes.RECTANGLE,{x,y,w:0.06,h,fill:{color:ac},line:{color:ac}});
-    s.addText(val,{x:x+0.1,y:y+0.1,w:w-0.2,h:h*0.55,fontSize:30,fontFace:'Arial',color:WHITE,bold:true,align:'center',valign:'middle'});
-    s.addText(lbl,{x:x+0.08,y:y+h*0.62,w:w-0.16,h:0.28,fontSize:8.5,fontFace:'Arial',color:MUTED,bold:true,align:'center'});
-    if(sub) s.addText(sub,{x:x+0.08,y:y+h*0.8,w:w-0.16,h:0.22,fontSize:7.5,fontFace:'Calibri',color:FAINT,align:'center'});
+    s.addText(val,{x:x+0.1,y:y+0.08,w:w-0.2,h:h*0.52,fontSize:28,fontFace:'Arial',color:WHITE,bold:true,align:'center',valign:'middle'});
+    s.addText(lbl,{x:x+0.08,y:y+h*0.62,w:w-0.16,h:0.26,fontSize:8,fontFace:'Arial',color:MUTED,bold:true,align:'center'});
+    if(sub) s.addText(sub,{x:x+0.08,y:y+h*0.8,w:w-0.16,h:0.2,fontSize:7,fontFace:'Calibri',color:FAINT,align:'center'});
   }
 
   function addFooter(s){
-    s.addText('FRUTIKA  |  Reporte de Campo  |  Corte '+fmtC,{x:0,y:H-0.28,w:W,h:0.25,fontSize:9,fontFace:'Calibri',color:FAINT,align:'center'});
+    s.addText('FRUTIKA  |  Reporte de Campo  |  Corte '+fmtC,{x:0,y:H-0.26,w:W,h:0.22,fontSize:8,fontFace:'Calibri',color:FAINT,align:'center'});
   }
 
-  // Build ALL repositors (including 0%) — same logic as calcCumplimiento but no date filter limitation
+  // ── Build all repositors (including 0%) ──
   function buildAllReps(){
     function inRange(fecha){
       const d=parseDate(fecha);if(!d)return false;
@@ -1520,16 +1524,28 @@ function generarInforme(){
     }).sort(function(a,b){ return b.pct-a.pct; });
   }
 
+  // ── Helper: paginate rows into slides ──
+  function paginateRows(items, renderFn, headerTitle, headerSub, headerColor, rowsPerSlide){
+    var pages = Math.ceil(items.length/rowsPerSlide);
+    for(var p=0;p<pages;p++){
+      var s=pres.addSlide(); addBg(s);
+      var pageLabel = pages>1 ? ' ('+(p+1)+'/'+pages+')' : '';
+      addHeader(s, headerTitle+pageLabel, p===0?headerSub:'', headerColor);
+      renderFn(s, items.slice(p*rowsPerSlide,(p+1)*rowsPerSlide), p);
+      addFooter(s);
+    }
+  }
+
   // ── SLIDE 1: PORTADA ──
   {
     const s=pres.addSlide(); addBg(s);
     s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:0.18,h:H,fill:{color:BORDER},line:{color:BORDER}});
     s.addShape(pres.shapes.RECTANGLE,{x:6.5,y:0,w:3.5,h:H,fill:{color:CARD},line:{color:CARD}});
-    s.addText('FRUTIKA',{x:0.4,y:1.1,w:5.8,h:1.3,fontSize:52,fontFace:'Arial',color:WHITE,bold:true,align:'left'});
-    s.addText('Reporte Ejecutivo de Campo',{x:0.4,y:2.4,w:5.8,h:0.6,fontSize:18,fontFace:'Calibri',color:'AAAAAA',align:'left'});
-    s.addText('Corte: '+fmtC,{x:0.4,y:3.0,w:5.8,h:0.45,fontSize:14,fontFace:'Calibri',color:'888888',align:'left'});
-    s.addText('Período: '+periodo,{x:0.4,y:3.45,w:5.8,h:0.35,fontSize:11,fontFace:'Calibri',color:'666666',align:'left'});
-    s.addText('REPORTES DE VENCIMIENTOS Y AVERIADOS',{x:0.4,y:4.1,w:5,h:0.45,fontSize:11,fontFace:'Arial',color:WHITE,bold:true,align:'left'});
+    s.addText('FRUTIKA',{x:0.4,y:1.5,w:5.8,h:1.5,fontSize:52,fontFace:'Arial',color:WHITE,bold:true,align:'left'});
+    s.addText('Reporte Ejecutivo de Campo',{x:0.4,y:3.0,w:5.8,h:0.6,fontSize:18,fontFace:'Calibri',color:'AAAAAA',align:'left'});
+    s.addText('Corte: '+fmtC,{x:0.4,y:3.6,w:5.8,h:0.45,fontSize:14,fontFace:'Calibri',color:'888888',align:'left'});
+    s.addText('Período: '+periodo,{x:0.4,y:4.05,w:5.8,h:0.35,fontSize:11,fontFace:'Calibri',color:'666666',align:'left'});
+    s.addText('REPORTES DE VENCIMIENTOS Y AVERIADOS',{x:0.4,y:5.5,w:5,h:0.45,fontSize:11,fontFace:'Arial',color:WHITE,bold:true,align:'left'});
     s.addText('CONFIDENCIAL - USO INTERNO',{x:2.5,y:H-0.35,w:5,h:0.28,fontSize:9,fontFace:'Calibri',color:FAINT,align:'center'});
   }
 
@@ -1537,166 +1553,178 @@ function generarInforme(){
   {
     const s=pres.addSlide(); addBg(s);
     addHeader(s,'RESUMEN EJECUTIVO - VENCIMIENTOS','Desempeño de carga de reportes — Corte '+fmtC+'  |  '+periodo,G);
-    const kW=2.3,kH=1.9,kY=1.05,gap=0.07;
+    const kW=2.3,kH=2.0,kY=1.05,gap=0.07;
     addKpi(s,0.18,kY,kW,kH,fmtN(totalAsig),'LOCALES ASIGNADOS','Total ruteo',B);
     addKpi(s,0.18+kW+gap,kY,kW,kH,fmtN(totalCarg),'LOCALES CARGADOS','Con reporte',G);
     addKpi(s,0.18+(kW+gap)*2,kY,kW,kH,fmtN(sinCargar),'SIN CARGAR','Pendientes',sinCargar>0?R:G);
     addKpi(s,0.18+(kW+gap)*3,kY,kW,kH,cumplPct+'%','CUMPLIMIENTO','Meta: 100%',cumplPct>=80?G:cumplPct>=50?Y:R);
     if(sinCargar>0){
-      s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:3.2,w:9.64,h:0.72,fill:{color:'2C1810'},line:{color:'6B2014'}});
-      s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:3.2,w:0.07,h:0.72,fill:{color:R},line:{color:R}});
-      const alertTxt='El '+(100-cumplPct)+'% de los locales asignados no presentan reporte. Acción correctiva sobre '+cero.length+' repositores con 0%.'+(best?'  Mayor carga: '+best.name+' ('+best.pct+'% — '+best.cargados+'/'+best.total+').':'');
-      s.addText(alertTxt,{x:0.32,y:3.2,w:9.3,h:0.72,fontSize:10,fontFace:'Calibri',color:'F5A09A',align:'left',valign:'middle'});
+      s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:3.3,w:9.64,h:0.72,fill:{color:'2C1810'},line:{color:'6B2014'}});
+      s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:3.3,w:0.07,h:0.72,fill:{color:R},line:{color:R}});
+      const at='El '+(100-cumplPct)+'% de los locales no presentan reporte. Accion correctiva sobre '+cero.length+' repositores con 0%.'+(best?'  Mayor carga: '+best.name+' ('+best.pct+'% — '+best.cargados+'/'+best.total+').':'');
+      s.addText(at,{x:0.32,y:3.3,w:9.3,h:0.72,fontSize:10,fontFace:'Calibri',color:'F5A09A',align:'left',valign:'middle'});
     }
-    if(best) s.addText('Repositor con mayor carga: '+best.name+' ('+best.pct+'% — '+best.cargados+' de '+best.total+' locales)',{x:0.3,y:4.05,w:9,h:0.35,fontSize:11,fontFace:'Calibri',color:MUTED,italic:true,align:'left'});
+    if(best) s.addText('Repositor con mayor carga: '+best.name+' ('+best.pct+'% — '+best.cargados+' de '+best.total+' locales)',{x:0.3,y:4.2,w:9,h:0.35,fontSize:11,fontFace:'Calibri',color:MUTED,italic:true,align:'left'});
     addFooter(s);
   }
 
-  // ── SLIDE 3: CUMPLIMIENTO COMPLETO (TODOS los repositores, incluye 0%) ──
+  // ── SLIDES: CUMPLIMIENTO TODOS LOS REPOSITORES (15 por slide) ──
   {
     const allReps = buildAllReps();
-    const s=pres.addSlide(); addBg(s);
-    addHeader(s,'CUMPLIMIENTO POR REPOSITOR — TODOS (incluye sin actividad)','Locales visitados vs. asignados en el período seleccionado',G);
-    const startY=1.05, rowH=0.37, barStartX=3.6, barW=5.6;
-    allReps.slice(0,12).forEach(function(r,i){
-      const y=startY+i*(rowH+0.035);
-      const color=r.pct>=80?G:r.pct>=50?Y:R;
-      if(i%2===0) s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y-0.02,w:9.64,h:rowH,fill:{color:CARD},line:{color:CARD}});
-      // Name — bold if has activity, normal if 0%
-      s.addText((r.pct>0?'★ ':'')+r.name,{x:0.25,y:y,w:3.25,h:rowH-0.06,fontSize:r.pct>0?9.5:9,fontFace:'Calibri',color:r.pct>0?TEXT:MUTED,bold:r.pct>0,align:'left',valign:'middle'});
-      // Bar background
-      s.addShape(pres.shapes.RECTANGLE,{x:barStartX,y:y+0.1,w:barW,h:0.15,fill:{color:CARD2},line:{color:CARD2}});
-      // Bar fill
-      if(r.cargados>0) s.addShape(pres.shapes.RECTANGLE,{x:barStartX,y:y+0.1,w:barW*(r.cargados/r.total),h:0.15,fill:{color:color},line:{color:color}});
-      // % label
-      s.addText(r.pct+'%',{x:barStartX+barW+0.1,y:y,w:0.5,h:rowH-0.06,fontSize:9.5,fontFace:'Arial',color:color,bold:true,align:'left',valign:'middle'});
-      // Count
-      s.addText(r.cargados+'/'+r.total,{x:barStartX+barW+0.65,y:y,w:0.6,h:rowH-0.06,fontSize:8,fontFace:'Calibri',color:FAINT,align:'left',valign:'middle'});
-    });
-    // If more than 12, add note
-    if(allReps.length>12){
-      s.addText('... y '+(allReps.length-12)+' repositores adicionales',{x:0.25,y:startY+12*(rowH+0.035),w:5,h:0.3,fontSize:8,fontFace:'Calibri',color:FAINT,align:'left'});
-    }
-    addFooter(s);
-  }
-
-  // ── SLIDE 4 (extra): CUMPLIMIENTO si hay más de 12 repositores ──
-  {
-    const allReps = buildAllReps();
-    if(allReps.length>12){
-      const s=pres.addSlide(); addBg(s);
-      addHeader(s,'CUMPLIMIENTO POR REPOSITOR — continuación','',G);
-      const startY=1.05, rowH=0.37, barStartX=3.6, barW=5.6;
-      allReps.slice(12,24).forEach(function(r,i){
-        const y=startY+i*(rowH+0.035);
+    paginateRows(allReps, function(s, rows, pageIdx){
+      const startY=0.95, rowH=0.42, barStartX=3.5, barW=5.7;
+      rows.forEach(function(r,i){
+        const y=startY+i*(rowH+0.03);
         const color=r.pct>=80?G:r.pct>=50?Y:R;
         if(i%2===0) s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y-0.02,w:9.64,h:rowH,fill:{color:CARD},line:{color:CARD}});
-        s.addText((r.pct>0?'★ ':'')+r.name,{x:0.25,y:y,w:3.25,h:rowH-0.06,fontSize:r.pct>0?9.5:9,fontFace:'Calibri',color:r.pct>0?TEXT:MUTED,bold:r.pct>0,align:'left',valign:'middle'});
-        s.addShape(pres.shapes.RECTANGLE,{x:barStartX,y:y+0.1,w:barW,h:0.15,fill:{color:CARD2},line:{color:CARD2}});
-        if(r.cargados>0) s.addShape(pres.shapes.RECTANGLE,{x:barStartX,y:y+0.1,w:barW*(r.cargados/r.total),h:0.15,fill:{color:color},line:{color:color}});
-        s.addText(r.pct+'%',{x:barStartX+barW+0.1,y:y,w:0.5,h:rowH-0.06,fontSize:9.5,fontFace:'Arial',color:color,bold:true,align:'left',valign:'middle'});
-        s.addText(r.cargados+'/'+r.total,{x:barStartX+barW+0.65,y:y,w:0.6,h:rowH-0.06,fontSize:8,fontFace:'Calibri',color:FAINT,align:'left',valign:'middle'});
+        s.addText((r.pct>0?'★ ':'')+r.name,{x:0.25,y:y,w:3.15,h:rowH-0.06,fontSize:9,fontFace:'Calibri',color:r.pct>0?TEXT:MUTED,bold:r.pct>0,align:'left',valign:'middle'});
+        s.addShape(pres.shapes.RECTANGLE,{x:barStartX,y:y+0.12,w:barW,h:0.16,fill:{color:CARD2},line:{color:CARD2}});
+        if(r.cargados>0) s.addShape(pres.shapes.RECTANGLE,{x:barStartX,y:y+0.12,w:barW*(r.cargados/r.total),h:0.16,fill:{color:color},line:{color:color}});
+        s.addText(r.pct+'%',{x:barStartX+barW+0.1,y:y,w:0.55,h:rowH-0.06,fontSize:9.5,fontFace:'Arial',color:color,bold:true,align:'left',valign:'middle'});
+        s.addText(r.cargados+'/'+r.total,{x:barStartX+barW+0.7,y:y,w:0.65,h:rowH-0.06,fontSize:8,fontFace:'Calibri',color:FAINT,align:'left',valign:'middle'});
+      });
+    }, 'CUMPLIMIENTO POR REPOSITOR — TODOS', 'Locales visitados vs. asignados — incluye repositores con 0%', G, 15);
+  }
+
+  // ── SLIDES: ALERTAS VENCIMIENTOS — TODOS los productos con local ──
+  {
+    const kW3=3.1,kH=1.0,kY=1.0;
+    // First slide: KPIs summary
+    {
+      const s=pres.addSlide(); addBg(s);
+      addHeader(s,'ALERTAS DE VENCIMIENTO — RESUMEN','Todos los productos proximos a vencer o vencidos',R);
+      addKpi(s,0.18,kY,kW3,kH,String(alerts.length),'Alertas activas','CRITICAS',R);
+      addKpi(s,0.18+kW3+0.1,kY,kW3,kH,fmtN(alerts.reduce(function(s,r){return s+(r.CANTIDAD||0);},0)),'Unidades en riesgo','',Y);
+      addKpi(s,0.18+(kW3+0.1)*2,kY,kW3,kH,String(new Set(alerts.map(function(r){return r.PRODUCTO;})).size),'SKUs afectados','',B);
+
+      if(!alerts.length){
+        s.addText('Sin alertas criticas en este periodo',{x:0.5,y:3,w:9,h:0.5,fontSize:14,fontFace:'Calibri',color:G,align:'center'});
+      } else {
+        // Show first 5 on summary slide
+        alerts.slice(0,5).forEach(function(r,i){
+          const y=2.2+i*0.95;
+          const color=r.days<=7?R:r.days<=30?Y:G;
+          s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:9.64,h:0.82,fill:{color:CARD},line:{color:BORDER}});
+          s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:0.06,h:0.82,fill:{color:color},line:{color:color}});
+          s.addText(r.PRODUCTO,{x:0.35,y:y+0.05,w:5.5,h:0.32,fontSize:10.5,fontFace:'Calibri',color:WHITE,bold:true});
+          s.addText(r['PUNTO DE VENTA'],{x:0.35,y:y+0.38,w:5.5,h:0.22,fontSize:9,fontFace:'Calibri',color:MUTED});
+          s.addText('Stock: '+fmtN(r.CANTIDAD)+' u.',{x:6.0,y:y+0.05,w:1.7,h:0.28,fontSize:9.5,fontFace:'Calibri',color:TEXT});
+          s.addText('Vence: '+fmtDate(r.vence),{x:6.0,y:y+0.35,w:1.7,h:0.26,fontSize:9,fontFace:'Calibri',color:TEXT});
+          s.addText(r.days+'d',{x:7.9,y:y+0.05,w:0.7,h:0.5,fontSize:15,fontFace:'Arial',color:color,bold:true,align:'center',valign:'middle'});
+          s.addShape(pres.shapes.RECTANGLE,{x:8.7,y:y+0.22,w:1.0,h:0.28,fill:{color:'3D1515'},line:{color:R}});
+          s.addText('CRITICO',{x:8.7,y:y+0.22,w:1.0,h:0.28,fontSize:7.5,fontFace:'Arial',color:R,bold:true,align:'center',valign:'middle'});
+        });
+      }
+      addFooter(s);
+    }
+
+    // Additional slides: ALL alerts paginated (12 per slide, compact)
+    if(alerts.length > 5){
+      paginateRows(alerts, function(s, rows, pageIdx){
+        const startY=0.95, rowH=0.54;
+        rows.forEach(function(r,i){
+          const y=startY+i*(rowH+0.02);
+          const color=r.days<=7?R:r.days<=30?Y:G;
+          if(i%2===0) s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y-0.01,w:9.64,h:rowH,fill:{color:CARD},line:{color:CARD}});
+          s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y,w:0.05,h:rowH-0.02,fill:{color:color},line:{color:color}});
+          // Product
+          s.addText(r.PRODUCTO,{x:0.32,y:y+0.04,w:4.2,h:0.24,fontSize:9,fontFace:'Calibri',color:WHITE,bold:true});
+          // Local
+          s.addText(r['PUNTO DE VENTA'],{x:0.32,y:y+0.28,w:4.2,h:0.2,fontSize:8,fontFace:'Calibri',color:MUTED});
+          // Vence
+          s.addText('Vence: '+fmtDate(r.vence),{x:4.65,y:y+0.04,w:1.9,h:0.24,fontSize:8.5,fontFace:'Calibri',color:TEXT});
+          // Stock
+          s.addText('Stock: '+fmtN(r.CANTIDAD)+' u.',{x:4.65,y:y+0.28,w:1.9,h:0.2,fontSize:8,fontFace:'Calibri',color:MUTED});
+          // Days
+          s.addText(r.days+'d',{x:6.65,y:y+0.04,w:0.6,h:0.44,fontSize:13,fontFace:'Arial',color:color,bold:true,align:'center',valign:'middle'});
+          // Repositor
+          s.addText(r.RELEVADOR?r.RELEVADOR.replace(/^\d+\.\s*/,''):'',{x:7.35,y:y+0.04,w:2.45,h:0.44,fontSize:7.5,fontFace:'Calibri',color:FAINT,align:'left',valign:'middle'});
+        });
+      }, 'ALERTAS DE VENCIMIENTO — DETALLE COMPLETO', 'Todos los productos — con local y repositor', R, 11);
+    }
+  }
+
+  // ── SLIDES: AVERIADOS — TODOS con local ──
+  if(aData.length){
+    // Summary slide
+    {
+      const s=pres.addSlide(); addBg(s);
+      addHeader(s,'ALERTAS DE AVERIADOS — RESUMEN','Todos los productos averiados con local y motivo',R);
+      const kW2=4.6,kH=1.0,kY=1.0;
+      addKpi(s,0.18,kY,kW2,kH,String(aData.length),'Registros averiados','CRITICOS',R);
+      addKpi(s,0.18+kW2+0.1,kY,kW2,kH,fmtN(totalAU),'Unidades averiadas','Total período',R);
+      aData.slice(0,5).forEach(function(r,i){
+        const y=2.2+i*0.95;
+        s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:9.64,h:0.82,fill:{color:CARD},line:{color:BORDER}});
+        s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:0.06,h:0.82,fill:{color:R},line:{color:R}});
+        s.addText(r.PRODUCTO,{x:0.35,y:y+0.05,w:5.5,h:0.32,fontSize:10.5,fontFace:'Calibri',color:WHITE,bold:true});
+        s.addText(r['PUNTO DE VENTA'],{x:0.35,y:y+0.38,w:5.5,h:0.22,fontSize:9,fontFace:'Calibri',color:MUTED});
+        s.addText(fmtN(r.CANTIDAD)+' u.',{x:6.0,y:y+0.05,w:1.4,h:0.28,fontSize:14,fontFace:'Arial',color:TEXT,bold:true});
+        if(r.MOTIVO) s.addText(r.MOTIVO,{x:6.0,y:y+0.35,w:2.2,h:0.26,fontSize:9,fontFace:'Calibri',color:Y,bold:true});
+        s.addShape(pres.shapes.RECTANGLE,{x:8.7,y:y+0.22,w:1.0,h:0.28,fill:{color:'3D1515'},line:{color:R}});
+        s.addText('CRITICO',{x:8.7,y:y+0.22,w:1.0,h:0.28,fontSize:7.5,fontFace:'Arial',color:R,bold:true,align:'center',valign:'middle'});
       });
       addFooter(s);
     }
-  }
-
-  // ── SLIDE 5: ALERTAS VENCIMIENTOS ──
-  {
-    const s=pres.addSlide(); addBg(s);
-    addHeader(s,'ALERTAS CRITICAS DE VENCIMIENTO','Productos próximos a vencer detectados',R);
-    const kW3=3.1,kH=1.0,kY=1.05;
-    addKpi(s,0.18,kY,kW3,kH,String(alerts.length),'Alertas activas','todas CRITICAS',R);
-    addKpi(s,0.18+kW3+0.1,kY,kW3,kH,fmtN(alerts.reduce(function(s,r){return s+(r.CANTIDAD||0);},0)),'Unidades en riesgo','',Y);
-    addKpi(s,0.18+(kW3+0.1)*2,kY,kW3,kH,String(new Set(alerts.map(function(r){return r.PRODUCTO;})).size),'SKUs afectados','',B);
-    if(!alerts.length){
-      s.addText('Sin alertas criticas en este período',{x:0.5,y:2.5,w:9,h:0.5,fontSize:14,fontFace:'Calibri',color:G,align:'left'});
-    } else {
-      alerts.slice(0,3).forEach(function(r,i){
-        const y=2.3+i*1.0;
-        const color=r.days<=7?R:r.days<=30?Y:G;
-        s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:9.64,h:0.88,fill:{color:CARD},line:{color:BORDER}});
-        s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:0.06,h:0.88,fill:{color:color},line:{color:color}});
-        s.addText(r.PRODUCTO,{x:0.35,y:y+0.06,w:6,h:0.35,fontSize:12,fontFace:'Calibri',color:WHITE,bold:true});
-        s.addText(r['PUNTO DE VENTA'],{x:0.35,y:y+0.38,w:6,h:0.25,fontSize:10,fontFace:'Calibri',color:MUTED});
-        s.addText('Stock: '+fmtN(r.CANTIDAD)+' u.',{x:6.5,y:y+0.06,w:1.8,h:0.3,fontSize:10,fontFace:'Calibri',color:TEXT});
-        s.addText('Vence: '+fmtDate(r.vence),{x:6.5,y:y+0.36,w:1.8,h:0.28,fontSize:10,fontFace:'Calibri',color:TEXT});
-        s.addText(r.days+'d',{x:8.5,y:y+0.06,w:0.8,h:0.58,fontSize:16,fontFace:'Arial',color:color,bold:true,align:'center',valign:'middle'});
-        s.addShape(pres.shapes.RECTANGLE,{x:9.3,y:y+0.28,w:0.9,h:0.28,fill:{color:'3D1515'},line:{color:R}});
-        s.addText('CRITICO',{x:9.3,y:y+0.28,w:0.9,h:0.28,fontSize:8,fontFace:'Arial',color:R,bold:true,align:'center',valign:'middle'});
-      });
+    // All averiados paginated
+    if(aData.length > 5){
+      paginateRows(aData, function(s, rows, pageIdx){
+        const startY=0.95, rowH=0.54;
+        rows.forEach(function(r,i){
+          const y=startY+i*(rowH+0.02);
+          if(i%2===0) s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y-0.01,w:9.64,h:rowH,fill:{color:CARD},line:{color:CARD}});
+          s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y,w:0.05,h:rowH-0.02,fill:{color:R},line:{color:R}});
+          s.addText(r.PRODUCTO,{x:0.32,y:y+0.04,w:4.2,h:0.24,fontSize:9,fontFace:'Calibri',color:WHITE,bold:true});
+          s.addText(r['PUNTO DE VENTA'],{x:0.32,y:y+0.28,w:4.2,h:0.2,fontSize:8,fontFace:'Calibri',color:MUTED});
+          s.addText(fmtN(r.CANTIDAD)+' u.',{x:4.65,y:y+0.04,w:1.4,h:0.44,fontSize:12,fontFace:'Arial',color:TEXT,bold:true,align:'center',valign:'middle'});
+          if(r.MOTIVO) s.addText(r.MOTIVO,{x:6.15,y:y+0.04,w:1.9,h:0.44,fontSize:8,fontFace:'Calibri',color:Y,bold:true,valign:'middle'});
+          s.addText(r.RELEVADOR?r.RELEVADOR.replace(/^\d+\.\s*/,''):'',{x:8.15,y:y+0.04,w:1.65,h:0.44,fontSize:7.5,fontFace:'Calibri',color:FAINT,valign:'middle'});
+        });
+      }, 'AVERIADOS — DETALLE COMPLETO', 'Todos los productos — con local, cantidad y motivo', R, 11);
     }
-    addFooter(s);
   }
 
-  // ── SLIDE 6: AVERIADOS (si hay datos) ──
-  if(aData.length){
-    const s=pres.addSlide(); addBg(s);
-    addHeader(s,'ALERTAS CRITICAS DE AVERIADOS','Productos averiados detectados',R);
-    const kW2=4.6,kH=1.0,kY=1.05;
-    addKpi(s,0.18,kY,kW2,kH,String(aData.length),'Alertas activas','todas CRITICAS',R);
-    addKpi(s,0.18+kW2+0.1,kY,kW2,kH,String(new Set(aData.map(function(r){return r.PRODUCTO;})).size),'SKUs afectados','',B);
-    aData.slice(0,3).forEach(function(r,i){
-      const y=2.3+i*1.0;
-      s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:9.64,h:0.88,fill:{color:CARD},line:{color:BORDER}});
-      s.addShape(pres.shapes.RECTANGLE,{x:0.18,y,w:0.06,h:0.88,fill:{color:R},line:{color:R}});
-      s.addText(r.PRODUCTO,{x:0.35,y:y+0.06,w:6,h:0.35,fontSize:12,fontFace:'Calibri',color:WHITE,bold:true});
-      s.addText(r['PUNTO DE VENTA'],{x:0.35,y:y+0.38,w:6,h:0.25,fontSize:10,fontFace:'Calibri',color:MUTED});
-      s.addText('Stock: '+fmtN(r.CANTIDAD)+' u.',{x:6.5,y:y+0.06,w:1.6,h:0.3,fontSize:10,fontFace:'Calibri',color:TEXT});
-      if(r.MOTIVO) s.addText(r.MOTIVO,{x:6.5,y:y+0.36,w:2,h:0.28,fontSize:10,fontFace:'Calibri',color:Y,bold:true});
-      s.addShape(pres.shapes.RECTANGLE,{x:9.3,y:y+0.28,w:0.9,h:0.28,fill:{color:'3D1515'},line:{color:R}});
-      s.addText('CRITICO',{x:9.3,y:y+0.28,w:0.9,h:0.28,fontSize:8,fontFace:'Arial',color:R,bold:true,align:'center',valign:'middle'});
-    });
-    addFooter(s);
-  }
-
-  // ── SLIDE 7: RECOMENDACIONES ──
+  // ── SLIDE: RECOMENDACIONES ──
   {
     const s=pres.addSlide(); addBg(s);
     addHeader(s,'RECOMENDACIONES ESTRATEGICAS','Acciones prioritarias para la dirección comercial',Y);
     const recs=[
-      {n:'01',t:'Revision Urgente de Repositores',txt:cero.length>0?cero.length+' repositor'+(cero.length>1?'es':'')+'  con 0% de cumplimiento. Convocar reunion en 48 hs.':'Todos los repositores tienen carga registrada.'},
+      {n:'01',t:'Revision Urgente de Repositores',txt:cero.length>0?cero.length+' repositor'+(cero.length>1?'es':'')+'  con 0% de cumplimiento. Convocar reunion en 48 hs e identificar causas raiz del '+(100-cumplPct)+'% de incumplimiento.':'Todos los repositores tienen carga registrada. Mantener el ritmo.'},
       {n:'02',t:'Gestion de Vencimientos',txt:alerts.length>0?alerts.length+' alerta'+(alerts.length>1?'s':'')+' critica'+(alerts.length>1?'s':'')+' con '+fmtN(alerts.reduce(function(s,r){return s+(r.CANTIDAD||0);},0))+' unidades. Coordinar retiro urgente.':'Sin vencimientos criticos en los proximos 90 dias.'},
       {n:'03',t:'Control de Averiados',txt:aData.length>0?fmtN(totalAU)+' unidades averiadas.'+(topAver?' '+topAver[0]+' concentra '+fmtN(topAver[1])+' u.':''):'Sin productos averiados en el periodo.'},
-      {n:'04',t:'Benchmarking Interno',txt:best?best.name+' lidera con '+best.pct+'% ('+best.cargados+'/'+best.total+' locales). Tomar como referencia.':'Sin repositores con carga en el periodo.'}
+      {n:'04',t:'Benchmarking Interno',txt:best?best.name+' lidera con '+best.pct+'% de cumplimiento ('+best.cargados+'/'+best.total+' locales). Tomar como referencia.':'Sin repositores con carga en el periodo.'}
     ];
-    const positions=[[0.18,1.05],[5.1,1.05],[0.18,3.2],[5.1,3.2]];
+    const positions=[[0.18,1.0],[5.1,1.0],[0.18,3.85],[5.1,3.85]];
     recs.forEach(function(r,i){
       const x=positions[i][0], y=positions[i][1];
-      s.addShape(pres.shapes.RECTANGLE,{x,y,w:4.72,h:1.98,fill:{color:CARD},line:{color:BORDER}});
-      s.addText(r.n,{x:x+0.15,y:y+0.1,w:1,h:0.7,fontSize:32,fontFace:'Calibri',color:CARD2,bold:true});
-      s.addText(r.t,{x:x+0.15,y:y+0.75,w:4.4,h:0.38,fontSize:12,fontFace:'Calibri',color:WHITE,bold:true});
-      s.addText(r.txt,{x:x+0.15,y:y+1.1,w:4.4,h:0.75,fontSize:10,fontFace:'Calibri',color:MUTED});
+      s.addShape(pres.shapes.RECTANGLE,{x,y,w:4.72,h:2.65,fill:{color:CARD},line:{color:BORDER}});
+      s.addText(r.n,{x:x+0.15,y:y+0.1,w:1,h:0.9,fontSize:32,fontFace:'Calibri',color:CARD2,bold:true});
+      s.addText(r.t,{x:x+0.15,y:y+0.95,w:4.4,h:0.42,fontSize:12,fontFace:'Calibri',color:WHITE,bold:true});
+      s.addText(r.txt,{x:x+0.15,y:y+1.38,w:4.4,h:1.1,fontSize:10,fontFace:'Calibri',color:MUTED,wrap:true});
     });
     addFooter(s);
   }
 
-  // ── SLIDE 8: PROXIMOS PASOS ──
+  // ── SLIDE: PROXIMOS PASOS ──
   {
     const s=pres.addSlide(); addBg(s);
     s.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:0.18,h:H,fill:{color:G},line:{color:G}});
-    s.addText('PROXIMOS PASOS',{x:0.4,y:0.5,w:4.5,h:1.5,fontSize:32,fontFace:'Arial',color:WHITE,bold:true,align:'left'});
-    const pasos=['1.  Reunion de equipo de campo — 48 hs',
-      '2.  '+(alerts.length>0?'Retiro o activacion de productos proximos a vencer':'Monitorear productos del proximo mes'),
-      '3.  Implementar sistema de carga quincenal',
-      '4.  Nuevo corte de reporte — en 15 dias'];
-    pasos.forEach(function(p,i){ s.addText(p,{x:0.4,y:2.5+i*0.55,w:4.5,h:0.48,fontSize:12,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'}); });
+    s.addText('PROXIMOS PASOS',{x:0.4,y:0.7,w:4.5,h:1.4,fontSize:30,fontFace:'Arial',color:WHITE,bold:true,align:'left'});
+    const pasos=['1.  Reunion de equipo de campo — 48 hs','2.  '+(alerts.length>0?'Retiro o activacion de productos proximos a vencer':'Monitorear productos del proximo mes'),'3.  Implementar sistema de carga quincenal','4.  Nuevo corte de reporte — en 15 dias'];
+    pasos.forEach(function(p,i){ s.addText(p,{x:0.4,y:2.4+i*0.65,w:4.5,h:0.55,fontSize:12,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'}); });
     s.addShape(pres.shapes.RECTANGLE,{x:5.2,y:0,w:4.8,h:H,fill:{color:CARD},line:{color:CARD}});
-    s.addText('RESUMEN EJECUTIVO',{x:5.4,y:0.4,w:4.3,h:1.0,fontSize:24,fontFace:'Arial',color:WHITE,bold:true});
-    const sumItems=[[cumplPct+'%','Cumplimiento de carga',cumplPct>=80?G:cumplPct>=50?Y:R],
-      [fmtN(sinCargar),'Locales sin reporte',R],
-      [fmtN(totalVU),'Unidades en riesgo de vencimiento',Y],
-      [String(alerts.length),'Alertas criticas activas',R],
-      [String(aData.length),'Productos averiados',O]];
+    s.addText('RESUMEN EJECUTIVO',{x:5.4,y:0.5,w:4.3,h:0.9,fontSize:22,fontFace:'Arial',color:WHITE,bold:true});
+    const sumItems=[[cumplPct+'%','Cumplimiento de carga',cumplPct>=80?G:cumplPct>=50?Y:R],[fmtN(sinCargar),'Locales sin reporte',R],[fmtN(totalVU),'Unidades en riesgo de vencimiento',Y],[String(alerts.length),'Alertas criticas activas',R],[String(aData.length),'Productos averiados',O]];
     sumItems.forEach(function(item,i){
-      s.addText(item[0],{x:5.4,y:1.6+i*0.65,w:1.5,h:0.58,fontSize:22,fontFace:'Calibri',color:item[2],bold:true,align:'right',valign:'middle'});
-      s.addText(item[1],{x:7.1,y:1.6+i*0.65,w:2.7,h:0.58,fontSize:11,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'});
+      s.addText(item[0],{x:5.4,y:1.7+i*0.85,w:1.5,h:0.75,fontSize:22,fontFace:'Calibri',color:item[2],bold:true,align:'right',valign:'middle'});
+      s.addText(item[1],{x:7.1,y:1.7+i*0.85,w:2.7,h:0.75,fontSize:11,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'});
     });
     s.addText('FRUTIKA  |  Reporte de Campo  |  Corte '+fmtC+'  |  USO INTERNO',{x:0,y:H-0.28,w:W,h:0.25,fontSize:9,fontFace:'Calibri',color:FAINT,align:'center'});
   }
 
   pres.writeFile({fileName:'Frutika_Reporte_'+fmtC.replace(/\//g,'.')+'.pptx'});
 }
+
 
 
 
