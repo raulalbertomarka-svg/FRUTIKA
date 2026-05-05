@@ -1586,6 +1586,76 @@ function generarInforme(){
     }, 'CUMPLIMIENTO POR REPOSITOR — TODOS', 'Locales visitados vs. asignados — incluye repositores con 0%', G, 15);
   }
 
+  // ── SLIDES: LOCALES NO VISITADOS ──
+  {
+    // Build list of unvisited PDVs grouped by repositor
+    function inRange2(fecha){
+      const d=parseDate(fecha);if(!d)return false;
+      if(selectedQ&&selectedQ.length){
+        return selectedQ.some(function(s){ const q=ALL_Q.find(function(x){return x.sort===s;}); if(!q)return false; return d>=new Date(q.from)&&d<=new Date(q.to+'T23:59:59'); });
+      }
+      const ct=getCorte(); const td=new Date(); td.setHours(23,59,59); return d<=(ct>td?td:ct);
+    }
+    const vis2=new Set();
+    vData.forEach(function(r){ vis2.add(normStr(r['PUNTO DE VENTA'])); });
+    RA.filter(function(r){ return inRange2(r.FECHA); }).forEach(function(r){ vis2.add(normStr(r['PUNTO DE VENTA'])); });
+    RVISITAS.filter(function(r){ return inRange2(r.FECHA); }).forEach(function(r){ vis2.add(normStr(r['PUNTO DE VENTA'])); });
+
+    // Group unvisited by repositor
+    const unvisitedByRep = {};
+    RR.forEach(function(row){
+      const pn = normStr(row.PDV);
+      if(!vis2.has(pn)){
+        const rep = row.REPOSITOR.trim();
+        if(!unvisitedByRep[rep]) unvisitedByRep[rep] = {name:rep, pdvs:[]};
+        unvisitedByRep[rep].pdvs.push(row.PDV.trim());
+      }
+    });
+
+    const repsList = Object.values(unvisitedByRep).sort(function(a,b){ return b.pdvs.length - a.pdvs.length; });
+    const totalUnvisited = repsList.reduce(function(s,r){ return s+r.pdvs.length; }, 0);
+
+    if(totalUnvisited > 0){
+      // Build flat rows: one row per PDV, with repositor name as group header
+      const allRows = [];
+      repsList.forEach(function(rep){
+        allRows.push({type:'header', name:rep.name, count:rep.pdvs.length});
+        rep.pdvs.forEach(function(pdv){
+          allRows.push({type:'pdv', pdv:pdv, rep:rep.name});
+        });
+      });
+
+      // Paginate with ~18 rows per slide (mix of headers + pdvs)
+      var rowsPerSlide = 18;
+      var pages = Math.ceil(allRows.length / rowsPerSlide);
+      for(var p=0; p<pages; p++){
+        var s=pres.addSlide(); addBg(s);
+        var pageLabel = pages>1 ? ' ('+(p+1)+'/'+pages+')' : '';
+        addHeader(s, 'LOCALES NO VISITADOS'+pageLabel, 'Puntos de venta pendientes de reporte en el período — '+totalUnvisited+' locales sin visitar', R);
+
+        var pageRows = allRows.slice(p*rowsPerSlide, (p+1)*rowsPerSlide);
+        var y = 0.95;
+        pageRows.forEach(function(row){
+          if(row.type === 'header'){
+            // Repositor header row
+            s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y,w:9.64,h:0.32,fill:{color:'2E1A1A'},line:{color:R}});
+            s.addShape(pres.shapes.RECTANGLE,{x:0.18,y:y,w:0.08,h:0.32,fill:{color:R},line:{color:R}});
+            s.addText(row.name+'   ('+row.count+' locales pendientes)',{x:0.32,y:y,w:9.3,h:0.32,fontSize:9,fontFace:'Arial',color:'F5A09A',bold:true,align:'left',valign:'middle'});
+            y += 0.35;
+          } else {
+            // PDV row
+            s.addShape(pres.shapes.RECTANGLE,{x:0.35,y:y,w:9.3,h:0.28,fill:{color:CARD},line:{color:BORDER}});
+            s.addText('✗',{x:0.38,y:y,w:0.25,h:0.28,fontSize:9,fontFace:'Arial',color:R,bold:true,align:'center',valign:'middle'});
+            s.addText(row.pdv,{x:0.65,y:y,w:8.8,h:0.28,fontSize:8.5,fontFace:'Calibri',color:MUTED,align:'left',valign:'middle'});
+            y += 0.3;
+          }
+        });
+
+        addFooter(s);
+      }
+    }
+  }
+
   // ── SLIDES: ALERTAS VENCIMIENTOS — TODOS los productos con local ──
   {
     const kW3=3.1,kH=1.0,kY=1.0;
